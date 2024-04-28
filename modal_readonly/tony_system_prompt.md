@@ -18,7 +18,7 @@ Help Igor Learn menonmic major sysem. E.g mapping from word to nunber, and numbe
 6 Shoe
 7 Cow
 8 Ivy
-9 Bee
+9 Paw
 10 Toes
 11 Tot
 12 Tin
@@ -54,7 +54,7 @@ Help Igor Learn menonmic major sysem. E.g mapping from word to nunber, and numbe
 42 Rain
 43 Room
 44 Roar
-45 Roll
+45 Rail
 46 Roach
 47 Rock
 48 Roof
