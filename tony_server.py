@@ -2,7 +2,7 @@
 
 
 # import asyncio
-from modal import Stub, web_endpoint
+from modal import App, web_endpoint
 from typing import Dict
 from icecream import ic
 from pathlib import Path
@@ -18,39 +18,11 @@ default_image = Image.debian_slim(python_version="3.10").pip_install(
 
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
-stub = Stub("modal-tony-server")
+app = App("modal-tony-server")
 
 modal_storage = "modal_readonly"
 
-
-def get_weather(line):
-    desc = line["weatherDesc"][0]["value"]
-    degree = line["FeelsLikeF"]
-    return degree, desc
-
-
-def parse_weather(weather):
-    current = weather["current_condition"][0]
-    degree, desc = get_weather(current)
-    output = f"""Current Weather: {desc}: degrees {degree}
-Weather Throught the Day hour, condition, temperature"""
-
-    hourly = weather["weather"][0]["hourly"]
-    for hour in hourly:
-        time = hour["time"]
-        degree, desc = get_weather(hour)
-        output += f" {time}: {desc}: degrees {degree} \n"
-
-    return output
-
-
-def weather_from_server():
-    params = {"format": "j1"}
-    response = httpx.get("https://wttr.in/seattle?format=json", params=params)
-    return response.json()
-
-
-@stub.function(
+@app.function(
     image=default_image,
     mounts=[Mount.from_local_dir(modal_storage, remote_path="/" + modal_storage)],
 )
@@ -74,3 +46,30 @@ weather:
     tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
     ic(len(tony))
     return tony
+
+
+def parse_weather(weather):
+    current = weather["current_condition"][0]
+    degree, desc = get_weather(current)
+    output = f"""Current Weather: {desc}: degrees {degree}
+Weather Throught the Day hour, condition, temperature"""
+
+    hourly = weather["weather"][0]["hourly"]
+    for hour in hourly:
+        time = hour["time"]
+        degree, desc = get_weather(hour)
+        output += f" {time}: {desc}: degrees {degree} \n"
+
+    return output
+
+def get_weather(line):
+    desc = line["weatherDesc"][0]["value"]
+    degree = line["FeelsLikeF"]
+    return degree, desc
+
+def weather_from_server():
+    params = {"format": "j1"}
+    response = httpx.get("https://wttr.in/seattle?format=json", params=params)
+    return response.json()
+
+
