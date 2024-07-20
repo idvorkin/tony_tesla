@@ -3,6 +3,7 @@
 
 # import asyncio
 from modal import App, web_endpoint
+import modal
 from typing import Dict
 from icecream import ic
 from pathlib import Path
@@ -13,7 +14,7 @@ import datetime
 from modal import Image, Mount
 
 default_image = Image.debian_slim(python_version="3.10").pip_install(
-    ["icecream", "httpx"]
+    ["icecream", "httpx","requests"]
 )
 
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
@@ -47,6 +48,42 @@ weather:
     ic(len(tony))
     return tony
 
+
+@app.function(
+    image=default_image,
+    secrets=[modal.Secret.from_name("PPLX_API_KEY")]
+)
+@web_endpoint(method="POST")
+def search(input: Dict):
+    import requests
+    import os
+    ic(input)
+    url = "https://api.perplexity.ai/chat/completions"
+    token = os.getenv("PPLX_API_KEY")
+    auth_line = f"Bearer {token}"
+    ic(auth_line)
+
+    payload = {
+            "model": "llama-3-sonar-large-32k-online",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Be precise and concise."
+                    },
+                {
+                    "role": "user",
+                    "content": input["question"],
+                    }
+                ]
+            }
+    headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": auth_line,
+            }
+
+    response = requests.post(url, json=payload, headers=headers)
+    return(response.text)
 
 def parse_weather(weather):
     current = weather["current_condition"][0]
