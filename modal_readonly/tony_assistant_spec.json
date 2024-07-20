@@ -11,7 +11,27 @@
     "model": {
         "model": "claude-3-5-sonnet-20240620",
         "provider": "anthropic",
-        "functions": [],
+        "tools": [
+            {
+                "type": "function",
+                "function": {
+                    "name": "search",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "question": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "description": "Search the internet"
+                },
+                "async": false,
+                "server": {
+                    "url": "https://idvorkin--modal-tony-server-search.modal.run"
+                }
+            }
+        ],
         "maxTokens": 150,
         "temperature": 1.0,
         "messages": [
