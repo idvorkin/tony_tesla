@@ -106,6 +106,26 @@ def vapi_calls() -> list[Call]:
 
 
 @app.command()
+def debug_loader():
+    base = Path("modal_readonly")
+    assistant_txt = (base / "tony_assistant_spec.json").read_text()
+    tony = json.loads(assistant_txt)
+    tony_prompt = (base / "tony_system_prompt.md").read_text()
+    # Add context to system prompt
+    extra_state = f"""
+# Current state
+date in UTC (but convert to PST as that's where Igor is, though don't mention it) :{datetime.now()} -
+weather:
+    """
+    tony_prompt += extra_state
+    ic(extra_state)
+    # update system prompt
+    tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
+    ic(len(tony))
+    return tony
+
+
+@app.command()
 def calls():
     calls = vapi_calls()
     ic(len(calls))
