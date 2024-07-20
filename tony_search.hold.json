@@ -1,0 +1,39 @@
+    "functions":[
+    {
+        "type": "function",
+        "messages": [
+            {
+                "type": "request-start",
+                "content": "Searching Please wait..."
+            },
+            {
+                "type": "request-complete",
+                "content": "Search complete"
+            },
+            {
+                "type": "request-failed",
+                "content": "I couldn't search."
+            },
+            {
+                "type": "request-response-delayed",
+                "content": "It appears there is some delay in the search API.",
+                "timingMilliseconds": 2000
+            }
+        ],
+        "function": {
+            "name": "search",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "question": {
+                        "type": "string"
+                    }
+                }
+            },
+            "description": "Search for answers using a search API"
+        },
+        "async": false,
+        "server": {
+            "url": "https://idvorkin--modal-tony-server-search.modal.run"
+        }
+    }],
