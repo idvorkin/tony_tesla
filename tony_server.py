@@ -14,7 +14,7 @@ import datetime
 from modal import Image, Mount
 
 default_image = Image.debian_slim(python_version="3.10").pip_install(
-    ["icecream", "httpx","requests"]
+    ["icecream", "httpx", "requests"]
 )
 
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
@@ -22,6 +22,7 @@ TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 app = App("modal-tony-server")
 
 modal_storage = "modal_readonly"
+
 
 @app.function(
     image=default_image,
@@ -49,14 +50,12 @@ weather:
     return tony
 
 
-@app.function(
-    image=default_image,
-    secrets=[modal.Secret.from_name("PPLX_API_KEY")]
-)
+@app.function(image=default_image, secrets=[modal.Secret.from_name("PPLX_API_KEY")])
 @web_endpoint(method="POST")
 def search(input: Dict):
     import requests
     import os
+
     ic(input)
     url = "https://api.perplexity.ai/chat/completions"
     token = os.getenv("PPLX_API_KEY")
@@ -64,26 +63,27 @@ def search(input: Dict):
     ic(auth_line)
 
     payload = {
-            "model": "llama-3-sonar-large-32k-online",
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "Be precise and concise."
-                    },
-                {
-                    "role": "user",
-                    "content": input["question"],
-                    }
-                ]
-            }
+        "model": "llama-3-sonar-large-32k-online",
+        "messages": [
+            {"role": "system", "content": "Be precise and concise."},
+            {
+                "role": "user",
+                "content": input["question"],
+            },
+        ],
+    }
     headers = {
-            "accept": "application/json",
-            "content-type": "application/json",
-            "authorization": auth_line,
-            }
+        "accept": "application/json",
+        "content-type": "application/json",
+        "authorization": auth_line,
+    }
 
-    response = requests.post(url, json=payload, headers=headers)
-    return(response.text)
+    search_response = requests.post(url, json=payload, headers=headers)
+    ic(search_response)
+    tool_call_id = input["toolCallId"] if "toolCallId" in input else "not passed in"
+    response = {"toolCallId": tool_call_id, "result": search_response.text}
+    return response
+
 
 def parse_weather(weather):
     current = weather["current_condition"][0]
@@ -99,14 +99,14 @@ Weather Throught the Day hour, condition, temperature"""
 
     return output
 
+
 def get_weather(line):
     desc = line["weatherDesc"][0]["value"]
     degree = line["FeelsLikeF"]
     return degree, desc
 
+
 def weather_from_server():
     params = {"format": "j1"}
     response = httpx.get("https://wttr.in/seattle?format=json", params=params)
     return response.json()
-
-
