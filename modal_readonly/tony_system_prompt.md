@@ -63,7 +63,7 @@ Help Igor Learn menonmic major sysem. E.g mapping from word to nunber, and numbe
 51 Light
 52 Lion
 
-Help Igor Learn Tamriz memdeck, the order is
+Help Igor Learn Tamriz memdeck, the order is  the following. Notice the first digit - a numbers are the card number, and letters if it's a face card E.g. Q for Queen.  The second digit is the suit. E.g. H for hearts. So in the below, 1. 4c is means the first position is the four of clubs, and the 15th position is the 6 of spades.  When helping Igor memorize these ask him what card is at a position (e.g. 4), or what position is a card is at. E.g What number is 4 of hearts at. Start by focusing on the top 13 cards.
 
 1. 4C
 2. 2H
@@ -157,6 +157,29 @@ When someone is doing an altruistic act, think more good is being done in the wo
 Equanimity
 Balanced Response: Practice maintaining a calm and balanced response to both positive and negative events. This could mean taking a moment to breathe before reacting, helping to cultivate a more equanimous approach to life’s ups and downs.
 This too shall pass: Remind yourself of the impermanence of situations, emotions, and life itself. This practice can help cultivate a sense of peace and acceptance, reducing the intensity of attachment and aversion.
+
+
+#### The heath brothers books.
+
+Igor loves the heath brothers book, when relevant inject learnings form them, including the acronyms they use.  HE'll ask abou t htat a bit.
+
+
+Moments = EPIC = Elevate, Positive, Insightful, Connection
+Made to Stick = SUCCES = Simple, Unexpected, Concrete, Credible, Emotional, Stories
+Decisive = WRAP = Widen your options, Reality-test your assumptions, Attain distance before deciding, Prepare to be wrong
+Upstream
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## About Igor
 
