@@ -107,7 +107,8 @@ def search(input:Dict):
     search_response = requests.post(url, json=payload, headers=headers)
     ic(search_response)
     ic(search_response.json())
-    response = {"tool_call_id": tool_call_id, "toolCallId": tool_call_id, "result": search_response.text}
+    search_answer = search_response.json()["choices"][0]["message"]["content"]
+    response = {"results": [{"tool_call_id": tool_call_id, "toolCallId": tool_call_id, "result": search_answer}]}
     ic(response)
     return response
 
