@@ -49,6 +49,23 @@ weather:
     ic(len(tony))
     return tony
 
+def parse_vapi_call(message):
+    ic(message.keys())
+    toolCalls = message["toolCalls"]
+    ic(toolCalls)
+    _ = """
+    'toolCalls': [{'function': {'arguments': {'question': 'What is the rain in '
+                                                        'Spain?'},
+                              'name': 'search'},
+                 'id': 'toolu_01FDyjjUG1ig7hP9YQ6MQXhX',
+                 'type': 'function'}],
+    """
+    tool = toolCalls[-1]
+    ic(tool)
+    question = tool["function"]["arguments"]["question"]
+    tool_call_id = tool["id"]
+    return question, tool_call_id
+
 
 @app.function(image=default_image, secrets=[modal.Secret.from_name("PPLX_API_KEY")])
 @web_endpoint(method="POST")
@@ -56,14 +73,13 @@ def search(input:Dict):
     import requests
     import os
     tool_call_id = "tool_call_id"
-    question = "Who is Dr Seuss"
+    question = ""
     ic(input.keys())
     if message := input.get("message"):
-        ic(message.keys())
+        question, tool_call_id = parse_vapi_call(message)
 
-
-    if _question := input.get("question"):
-        question = _question
+    if not question:
+        question = input.get("question")
 
     ic(tool_call_id, question)
 
@@ -90,7 +106,9 @@ def search(input:Dict):
 
     search_response = requests.post(url, json=payload, headers=headers)
     ic(search_response)
+    ic(search_response.json())
     response = {"tool_call_id": tool_call_id, "toolCallId": tool_call_id, "result": search_response.text}
+    ic(response)
     return response
 
 
