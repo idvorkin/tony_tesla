@@ -9,7 +9,7 @@
         "similarityBoost": 0.75
     },
     "model": {
-        "model": "gpt-4o"
+        "model": "gpt-4o",
         "provider": "openai",
         "tools": [
             {
