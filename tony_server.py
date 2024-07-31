@@ -49,6 +49,7 @@ weather:
     ic(len(tony))
     return tony
 
+
 def parse_vapi_call(message):
     ic(message.keys())
     toolCalls = message["toolCalls"]
@@ -69,9 +70,10 @@ def parse_vapi_call(message):
 
 @app.function(image=default_image, secrets=[modal.Secret.from_name("PPLX_API_KEY")])
 @web_endpoint(method="POST")
-def search(input:Dict):
+def search(input: Dict):
     import requests
     import os
+
     tool_call_id = "tool_call_id"
     question = ""
     ic(input.keys())
@@ -89,13 +91,10 @@ def search(input:Dict):
     ic(auth_line)
 
     payload = {
-        "model": "llama-3-sonar-large-32k-online",
+        "model": "llama-3.1-sonar-large-128k-online",
         "messages": [
             {"role": "system", "content": "Be precise and concise."},
-            {
-                "role": "user",
-                "content": question
-            },
+            {"role": "user", "content": question},
         ],
     }
     headers = {
@@ -108,7 +107,7 @@ def search(input:Dict):
     ic(search_response)
     ic(search_response.json())
     search_answer = search_response.json()["choices"][0]["message"]["content"]
-    response = {"results": [{"tool_call_id": tool_call_id, "toolCallId": tool_call_id, "result": search_answer}]}
+    response = {"results": [{"toolCallId": tool_call_id, "result": search_answer}]}
     ic(response)
     return response
 
