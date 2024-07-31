@@ -10,6 +10,7 @@ from pathlib import Path
 import json
 import httpx
 import datetime
+from zoneinfo import ZoneInfo
 
 from modal import Image, Mount
 
@@ -36,11 +37,12 @@ def assistant(input: Dict):
     tony = json.loads(assistant_txt)
     tony_prompt = (base / "tony_system_prompt.md").read_text()
     # Add context to system prompt
+    time_in_pst = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))llama-3.1-sonar-large-128k-online
     extra_state = f"""
-# Current state
-date in UTC (but convert to PST as that's where Igor is, though don't mention it) :{datetime.datetime.now()} -
-weather:
-{parse_weather(weather_from_server())}
+<CurrentState>
+    Date and Time: {time_in_pst}
+    Igor's Location: "Seattle"
+</CurrentState>
     """
     tony_prompt += extra_state
     ic(extra_state)
