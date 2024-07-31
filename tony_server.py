@@ -37,11 +37,11 @@ def assistant(input: Dict):
     tony = json.loads(assistant_txt)
     tony_prompt = (base / "tony_system_prompt.md").read_text()
     # Add context to system prompt
-    time_in_pst = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))llama-3.1-sonar-large-128k-online
+    time_in_pst = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
     extra_state = f"""
 <CurrentState>
     Date and Time: {time_in_pst}
-    Igor's Location: "Seattle"
+    Igor's Location: Seattle
 </CurrentState>
     """
     tony_prompt += extra_state
