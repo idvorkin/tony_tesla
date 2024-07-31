@@ -9,8 +9,8 @@
         "similarityBoost": 0.75
     },
     "model": {
-        "model": "claude-3-5-sonnet-20240620",
-        "provider": "anthropic",
+        "model": "gpt-4o"
+        "provider": "openai",
         "tools": [
             {
                 "type": "function",
