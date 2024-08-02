@@ -47,11 +47,11 @@ def list():
 
 
 @app.command()
-def add():
+def add(content: str):
     db = client.get_database_client(DATABASE_ID)
     container = db.get_container_client(CONTAINER_ID)
     container.create_item(
-        {"id": str(uuid.uuid4()), "user": "testserver", "reason": "cuz my test works"}
+        {"id": str(uuid.uuid4()), "user": "testserver", "content": content}
     )
 
 

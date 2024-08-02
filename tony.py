@@ -10,7 +10,6 @@ import typer
 from langchain.prompts import ChatPromptTemplate
 
 from loguru import logger
-from rich import print
 from rich.console import Console
 import langchain_helper
 import httpx
@@ -136,6 +135,17 @@ def calls():
 
 
 @app.command()
+def export_vapi_tony_config():
+    headers = {
+        "authorization": f"{os.environ['VAPI_API_KEY']}",
+    }
+    tony = httpx.get(
+        f"https://api.vapi.ai/assistant/{TONY_ASSISTANT_ID}", headers=headers
+    ).json()
+    print(json.dumps(tony, indent=4))
+
+
+@app.command()
 def update_tony():
     headers = {
         "authorization": f"{os.environ['VAPI_API_KEY']}",
@@ -176,7 +186,7 @@ def parse_calls(
 
 
 @app.command()
-def local_debug():
+def local_parse_config():
     modal_storage = "modal_readonly"
     base = Path(f"{modal_storage}")
     assistant_txt = (base / "tony_assistant_spec.json").read_text(
