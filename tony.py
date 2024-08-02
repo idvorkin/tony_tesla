@@ -135,6 +135,18 @@ def calls():
 
 
 @app.command()
+def last_transcript():
+    headers = {
+        "authorization": f"{os.environ['VAPI_API_KEY']}",
+        "createdAtGE": (datetime.now() - timedelta(days=1)).isoformat(),
+    }
+    # future add createdAtGe
+    calls = [c for c in httpx.get("https://api.vapi.ai/call", headers=headers).json()]
+    ic(len(calls))
+    ic(calls[0])
+
+
+@app.command()
 def export_vapi_tony_config():
     headers = {
         "authorization": f"{os.environ['VAPI_API_KEY']}",
