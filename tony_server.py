@@ -76,14 +76,18 @@ def search(input: Dict):
     import requests
     import os
 
-    tool_call_id = "tool_call_id"
+    tool_call_id = ""
     question = ""
+
     ic(input.keys())
     if message := input.get("message"):
         question, tool_call_id = parse_vapi_call(message)
 
     if not question:
         question = input.get("question")
+
+    if not tool_call_id:
+        tool_call_id = input.get("id", "no_id_passed_in")
 
     ic(tool_call_id, question)
 

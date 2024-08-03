@@ -5,10 +5,11 @@ import typer
 from loguru import logger
 from rich.console import Console
 from icecream import ic
-from datetime import datetime
+from datetime import datetime, timedelta
 import azure.cosmos.cosmos_client as cosmos_client
 import uuid
 import os
+import dateutil.parser
 
 console = Console()
 app = typer.Typer()
@@ -34,13 +35,26 @@ client = cosmos_client.CosmosClient(
 
 
 @app.command()
-def list():
+def list(date: str = None):
     """
-    List all files in the storage directory
+    List all files in the storage directory after a given date.
+    If no date is provided, it defaults to 2 days ago.
     """
+    if date is None:
+        query_date = datetime.now() - timedelta(days=2)
+    else:
+        try:
+            query_date = dateutil.parser.parse(date)
+        except ValueError:
+            logger.error(
+                "Invalid date format. Please provide the date in a valid format."
+            )
+            return
+
+    query = f"SELECT * FROM c WHERE c._ts > {query_date.timestamp()}"
     db = client.get_database_client(DATABASE_ID)
     container = db.get_container_client(CONTAINER_ID)
-    items = container.read_all_items()
+    items = container.query_items(query, enable_cross_partition_query=True)
     for item in items:
         ts = datetime.fromtimestamp(item["_ts"])
         ic(ts.strftime("%B %d, %Y %I:%M:%S"), item)
