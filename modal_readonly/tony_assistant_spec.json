@@ -15,6 +15,46 @@
             {
                 "type": "function",
                 "function": {
+                    "name": "journal_read",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "date": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "description": "Read the users journal"
+                },
+                "async": false,
+                "server": {
+                    "url": "https://idvorkin--modal-tony-server-journal-read.modal.run",
+                    "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "journal_append",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "date": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "description": "Append an entry to the users journal"
+                },
+                "async": true,
+                "server": {
+                    "url": "https://idvorkin--modal-tony-server-journal-append.modal.run",
+                    "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+                }
+            }
+            {
+                "type": "function",
+                "function": {
                     "name": "search",
                     "parameters": {
                         "type": "object",
