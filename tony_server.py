@@ -22,6 +22,7 @@ default_image = Image.debian_slim(python_version="3.12").pip_install(
     ["icecream", "requests", "pydantic"]
 )
 
+X_VAPI_SECRET = "x-vapi-secret"
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
 app = App("modal-tony-server")
@@ -29,12 +30,17 @@ app = App("modal-tony-server")
 modal_storage = "modal_readonly"
 
 
+def get_headers(request: Request):
+    ic(request.headers)
+    return request.headers
+
+
 @app.function(
     image=default_image,
     mounts=[Mount.from_local_dir(modal_storage, remote_path="/" + modal_storage)],
 )
 @web_endpoint(method="POST")
-def assistant(input: Dict):
+def assistant(input: Dict, headers=Depends(get_headers)):
     ic(input)
     base = Path(f"/{modal_storage}")
     assistant_txt = (base / "tony_assistant_spec.json").read_text()
@@ -52,7 +58,14 @@ def assistant(input: Dict):
     ic(extra_state)
     # update system prompt
     tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
+
+    secret = headers.get(X_VAPI_SECRET, "no secret passed to search")
+    # for each tool set the secret
+    for tool in tony["assistant"]["model"]["tools"]:
+        tool["secret"] = secret
+
     ic(len(tony))
+
     return tony
 
 
@@ -104,18 +117,13 @@ def raise_if_not_authorized(token):
 # x-vapi-secret header -
 
 
-def get_headers(request: Request):
-    ic(request.headers)
-    return request.headers
-
-
 @app.function(
     image=default_image,
     secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
 )
 @web_endpoint(method="POST")
 def search(input: Dict, headers=Depends(get_headers)):
-    x_vapi_secret = headers.get("x-vapi-secret")
+    x_vapi_secret = headers.get(X_VAPI_SECRET, "no secret passed to search")
 
     tool_call_id = ""
     question = ""

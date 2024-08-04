@@ -28,7 +28,8 @@
                 },
                 "async": false,
                 "server": {
-                    "url": "https://idvorkin--modal-tony-server-search.modal.run"
+                    "url": "https://idvorkin--modal-tony-server-search.modal.run",
+                    "secret": "$VAPI_SECRET"
                 }
             }
         ],

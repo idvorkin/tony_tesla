@@ -9,14 +9,19 @@ deploy:
     modal deploy {{tony_server}}
 
 test-assistant:
-    http POST https://idvorkin--modal-tony-server-assistant.modal.run notused="the cat in the hat"
+    http POST https://idvorkin--modal-tony-server-assistant.modal.run notused="the cat in the hat" \
+        x-vapi-secret:$TONY_API_KEY \
 
-test-prod-search:
+test-assistant-dev:
+    http POST https://idvorkin--modal-tony-server-assistant-dev.modal.run notused="the cat in the hat" \
+        x-vapi-secret:$TONY_API_KEY \
+
+test-search:
     http POST https://idvorkin--modal-tony-server-search.modal.run \
         x-vapi-secret:$TONY_API_KEY \
         question="What is the weather in moscow"
 
-test-dev-search:
+test-search-dev:
     http POST https://idvorkin--modal-tony-server-search-dev.modal.run \
         x-vapi-secret:$TONY_API_KEY \
         question="What is the weather in moscow"
