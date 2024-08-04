@@ -8,14 +8,14 @@ from typing import Dict
 from icecream import ic
 from pathlib import Path
 import json
-import httpx
 import datetime
+import pydantic
 from zoneinfo import ZoneInfo
 
 from modal import Image, Mount
 
-default_image = Image.debian_slim(python_version="3.10").pip_install(
-    ["icecream", "httpx", "requests"]
+default_image = Image.debian_slim(python_version="3.12").pip_install(
+    ["icecream", "requests", "pydantic"]
 )
 
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
@@ -52,27 +52,87 @@ def assistant(input: Dict):
     return tony
 
 
-def parse_vapi_call(message):
-    ic(message.keys())
-    toolCalls = message["toolCalls"]
-    ic(toolCalls)
-    _ = """
+class FunctionCall(pydantic.BaseModel):
+    id: str
+    name: str
+    arguments: Dict
+
+
+def parse_vapi_call(message) -> FunctionCall:
+    """Parse the call from VAPI which has the following shape
+
     'toolCalls': [{'function': {'arguments': {'question': 'What is the rain in '
                                                         'Spain?'},
                               'name': 'search'},
                  'id': 'toolu_01FDyjjUG1ig7hP9YQ6MQXhX',
                  'type': 'function'}],
     """
+
+    ic(message.keys())
+    toolCalls = message["toolCalls"]
+    ic(toolCalls)
     tool = toolCalls[-1]
     ic(tool)
-    question = tool["function"]["arguments"]["question"]
-    tool_call_id = tool["id"]
-    return question, tool_call_id
+    return FunctionCall(
+        id=tool["id"],
+        name=tool["function"]["name"],
+        arguments=tool["function"]["arguments"],
+    )
 
 
 @app.function(image=default_image, secrets=[modal.Secret.from_name("PPLX_API_KEY")])
 @web_endpoint(method="POST")
 def search(input: Dict):
+    import requests
+    import os
+
+    tool_call_id = ""
+    question = ""
+
+    ic(input.keys())
+    if message := input.get("message"):
+        call = parse_vapi_call(message)
+        ic(call)
+        question, tool_call_id = call.arguments["question"], call.id
+
+    if not question:
+        question = input.get("question")
+
+    if not tool_call_id:
+        tool_call_id = input.get("id", "no_id_passed_in")
+
+    ic(tool_call_id, question)
+
+    url = "https://api.perplexity.ai/chat/completions"
+    token = os.getenv("PPLX_API_KEY")
+    auth_line = f"Bearer {token}"
+    ic(auth_line)
+
+    payload = {
+        "model": "llama-3.1-sonar-large-128k-online",
+        "messages": [
+            {"role": "system", "content": "Be precise and concise."},
+            {"role": "user", "content": question},
+        ],
+    }
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "authorization": auth_line,
+    }
+
+    search_response = requests.post(url, json=payload, headers=headers)
+    ic(search_response)
+    ic(search_response.json())
+    search_answer = search_response.json()["choices"][0]["message"]["content"]
+    response = {"results": [{"toolCallId": tool_call_id, "result": search_answer}]}
+    ic(response)
+    return response
+
+
+@app.function(image=default_image, secrets=[modal.Secret.from_name("PPLX_API_KEY")])
+@web_endpoint(method="POST")
+def journal_read(input: Dict):
     import requests
     import os
 
@@ -116,30 +176,3 @@ def search(input: Dict):
     response = {"results": [{"toolCallId": tool_call_id, "result": search_answer}]}
     ic(response)
     return response
-
-
-def parse_weather(weather):
-    current = weather["current_condition"][0]
-    degree, desc = get_weather(current)
-    output = f"""Current Weather: {desc}: degrees {degree}
-Weather Throught the Day hour, condition, temperature"""
-
-    hourly = weather["weather"][0]["hourly"]
-    for hour in hourly:
-        time = hour["time"]
-        degree, desc = get_weather(hour)
-        output += f" {time}: {desc}: degrees {degree} \n"
-
-    return output
-
-
-def get_weather(line):
-    desc = line["weatherDesc"][0]["value"]
-    degree = line["FeelsLikeF"]
-    return degree, desc
-
-
-def weather_from_server():
-    params = {"format": "j1"}
-    response = httpx.get("https://wttr.in/seattle?format=json", params=params)
-    return response.json()
