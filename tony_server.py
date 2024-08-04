@@ -11,6 +11,7 @@ import json
 import datetime
 import pydantic
 from zoneinfo import ZoneInfo
+import cosmos_client
 
 from modal import Image, Mount, Secret
 import requests
@@ -20,7 +21,7 @@ from fastapi import Depends, HTTPException, Request, status
 
 
 default_image = Image.debian_slim(python_version="3.12").pip_install(
-    ["icecream", "requests", "pydantic"]
+    ["icecream", "requests", "pydantic", "azure-cosmos"]
 )
 
 X_VAPI_SECRET = "x-vapi-secret"
@@ -169,27 +170,72 @@ def search(params: Dict, headers=Depends(get_headers)):
     return vapi_response
 
 
+TONY_STORAGE_SERVER_API_KEY = "TONY_STORAGE_SERVER_API_KEY"
+DB_HOST = "https://tonyserver.documents.azure.com:443/"
+MASTER_KEY = os.environ["TONY_STORAGE_SERVER_API_KEY"]
+DATABASE_ID = "grateful"
+CONTAINER_ID = "main"
+JOURNAL_DATABASE_ID = "journal"
+JOURNAL_ID_CONTAINER = "journal_container"
+
+
 @app.function(
     image=default_image,
-    secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
+    secrets=[
+        Secret.from_name(TONY_API_KEY_NAME),
+        Secret.from_name(TONY_STORAGE_SERVER_API_KEY),
+    ],
 )
 @web_endpoint(method="POST")
 def journal_append(params: Dict, headers=Depends(get_headers)):
     raise_if_not_authorized(headers)
     call = parse_tool_call("journal_append", params)
-    return make_vapi_response(
-        call, f"journal append not implemented yet content:{call.args["content"]}"
+    client = cosmos_client.CosmosClient(
+        DB_HOST,
+        {"masterKey": os.environ[TONY_STORAGE_SERVER_API_KEY]},
+        user_agent="storage.py",
+        user_agent_overwrite=True,
     )
+    container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
+        JOURNAL_ID_CONTAINER
+    )
+    items = container.query_items("select * FROM c", enable_cross_partition_query=True)
+    first = None
+    for i in items:
+        first = i
+        break
+    ic(first)
+    journal_item = first["content"]
+    journal_item["content"] += f"{datetime.now()}: {call.args["content"]}\n"
+    container.upsert_item(journal_item)
+    return make_vapi_response(call, "success")
 
 
 @app.function(
     image=default_image,
-    secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
+    secrets=[
+        Secret.from_name(TONY_API_KEY_NAME),
+        Secret.from_name(TONY_STORAGE_SERVER_API_KEY),
+    ],
 )
 @web_endpoint(method="POST")
 def journal_read(params: Dict, headers=Depends(get_headers)):
     raise_if_not_authorized(headers)
     call = parse_tool_call("journal_read", params)
-    return make_vapi_response(
-        call, f"journal append not implemented yet date: {call.args["date"]}"
+    client = cosmos_client.CosmosClient(
+        DB_HOST,
+        {"masterKey": os.environ[TONY_STORAGE_SERVER_API_KEY]},
+        user_agent="storage.py",
+        user_agent_overwrite=True,
     )
+    container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
+        JOURNAL_ID_CONTAINER
+    )
+    items = container.query_items("select * FROM c", enable_cross_partition_query=True)
+    first = None
+    for i in items:
+        first = i
+        break
+    ic(first)
+    content = first["content"]
+    return make_vapi_response(call, f"{content}")

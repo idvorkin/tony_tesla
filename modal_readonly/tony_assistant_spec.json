@@ -51,7 +51,7 @@
                     "url": "https://idvorkin--modal-tony-server-journal-append.modal.run",
                     "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
                 }
-            }
+            },
             {
                 "type": "function",
                 "function": {
