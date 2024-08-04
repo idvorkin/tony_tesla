@@ -19,6 +19,9 @@ test-assistant-dev:
 test-read:
     http POST https://idvorkin--modal-tony-server-journal-read.modal.run date="the cat in the hat" \
         x-vapi-secret:$TONY_API_KEY \
+test-append:
+    http POST https://idvorkin--modal-tony-server-journal-append.modal.run content="ignore this entry" \
+        x-vapi-secret:$TONY_API_KEY \
 
 test-search:
     http POST https://idvorkin--modal-tony-server-search.modal.run \

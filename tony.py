@@ -206,7 +206,7 @@ def local_parse_config():
     )
     ic(assistant_txt)
     tony = json.loads(assistant_txt)
-    tony_prompt = json.loads((base / "tony_system_prompt.md").read_text())
+    tony_prompt = (base / "tony_system_prompt.md").read_text()
     # update system prompt
     tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
     ic(len(tony))
