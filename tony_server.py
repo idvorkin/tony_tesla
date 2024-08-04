@@ -11,11 +11,11 @@ import json
 import datetime
 import pydantic
 from zoneinfo import ZoneInfo
-import cosmos_client
 
 from modal import Image, Mount, Secret
 import requests
 import uuid
+import azure.cosmos.cosmos_client as cosmos_client
 
 from fastapi import Depends, HTTPException, Request, status
 
@@ -172,7 +172,6 @@ def search(params: Dict, headers=Depends(get_headers)):
 
 TONY_STORAGE_SERVER_API_KEY = "TONY_STORAGE_SERVER_API_KEY"
 DB_HOST = "https://tonyserver.documents.azure.com:443/"
-MASTER_KEY = os.environ["TONY_STORAGE_SERVER_API_KEY"]
 DATABASE_ID = "grateful"
 CONTAINER_ID = "main"
 JOURNAL_DATABASE_ID = "journal"
@@ -205,7 +204,7 @@ def journal_append(params: Dict, headers=Depends(get_headers)):
         first = i
         break
     ic(first)
-    journal_item = first["content"]
+    journal_item = first
     journal_item["content"] += f"{datetime.now()}: {call.args["content"]}\n"
     container.upsert_item(journal_item)
     return make_vapi_response(call, "success")
