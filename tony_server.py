@@ -3,8 +3,8 @@
 
 # import asyncio
 from modal import App, web_endpoint
-import modal
 from typing import Dict
+import os
 from icecream import ic
 from pathlib import Path
 import json
@@ -12,7 +12,13 @@ import datetime
 import pydantic
 from zoneinfo import ZoneInfo
 
-from modal import Image, Mount
+from modal import Image, Mount, Secret
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+auth_scheme = HTTPBearer()
+
 
 default_image = Image.debian_slim(python_version="3.12").pip_install(
     ["icecream", "requests", "pydantic"]
@@ -80,11 +86,29 @@ def parse_vapi_call(message) -> FunctionCall:
     )
 
 
-@app.function(image=default_image, secrets=[modal.Secret.from_name("PPLX_API_KEY")])
+PPLX_API_KEY_NAME = "PPLX_API_KEY"
+TONY_API_KEY_NAME = "TONY_API_KEY"
+
+
+def raise_if_not_authorized(token):
+    ic(token)
+    if token.credentials != os.environ[TONY_API_KEY_NAME]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect bearer token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+@app.function(
+    image=default_image,
+    secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
+)
 @web_endpoint(method="POST")
-def search(input: Dict):
+def search(input: Dict, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
     import requests
-    import os
+
+    raise_if_not_authorized(token)
 
     tool_call_id = ""
     question = ""
@@ -104,56 +128,8 @@ def search(input: Dict):
     ic(tool_call_id, question)
 
     url = "https://api.perplexity.ai/chat/completions"
-    token = os.getenv("PPLX_API_KEY")
-    auth_line = f"Bearer {token}"
-    ic(auth_line)
-
-    payload = {
-        "model": "llama-3.1-sonar-large-128k-online",
-        "messages": [
-            {"role": "system", "content": "Be precise and concise."},
-            {"role": "user", "content": question},
-        ],
-    }
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "authorization": auth_line,
-    }
-
-    search_response = requests.post(url, json=payload, headers=headers)
-    ic(search_response)
-    ic(search_response.json())
-    search_answer = search_response.json()["choices"][0]["message"]["content"]
-    response = {"results": [{"toolCallId": tool_call_id, "result": search_answer}]}
-    ic(response)
-    return response
-
-
-@app.function(image=default_image, secrets=[modal.Secret.from_name("PPLX_API_KEY")])
-@web_endpoint(method="POST")
-def journal_read(input: Dict):
-    import requests
-    import os
-
-    tool_call_id = ""
-    question = ""
-
-    ic(input.keys())
-    if message := input.get("message"):
-        question, tool_call_id = parse_vapi_call(message)
-
-    if not question:
-        question = input.get("question")
-
-    if not tool_call_id:
-        tool_call_id = input.get("id", "no_id_passed_in")
-
-    ic(tool_call_id, question)
-
-    url = "https://api.perplexity.ai/chat/completions"
-    token = os.getenv("PPLX_API_KEY")
-    auth_line = f"Bearer {token}"
+    pplx_token = os.getenv(PPLX_API_KEY_NAME)
+    auth_line = f"Bearer {pplx_token}"
     ic(auth_line)
 
     payload = {
