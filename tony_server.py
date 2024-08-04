@@ -3,7 +3,7 @@
 
 # import asyncio
 from modal import App, web_endpoint
-from typing import Dict
+from typing import Annotated, Dict
 import os
 from icecream import ic
 from pathlib import Path
@@ -13,11 +13,9 @@ import pydantic
 from zoneinfo import ZoneInfo
 
 from modal import Image, Mount, Secret
+import requests
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
-auth_scheme = HTTPBearer()
+from fastapi import HTTPException, status, Header
 
 
 default_image = Image.debian_slim(python_version="3.12").pip_install(
@@ -95,7 +93,7 @@ TONY_API_KEY_NAME = "TONY_API_KEY"
 
 def raise_if_not_authorized(token):
     ic(token)
-    if token.credentials != os.environ[TONY_API_KEY_NAME]:
+    if token != os.environ[TONY_API_KEY_NAME]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect bearer token",
@@ -103,15 +101,16 @@ def raise_if_not_authorized(token):
         )
 
 
+# x-vapi-secret header -
+
+
 @app.function(
     image=default_image,
     secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
 )
 @web_endpoint(method="POST")
-def search(input: Dict, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
-    import requests
-
-    raise_if_not_authorized(token)
+def search(input: Dict, x_vapi_secret: Annotated[str | None, Header()]):
+    raise_if_not_authorized(x_vapi_secret)
 
     tool_call_id = ""
     question = ""
