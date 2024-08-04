@@ -24,6 +24,8 @@ DB_HOST = "https://tonyserver.documents.azure.com:443/"
 MASTER_KEY = os.environ["TONY_STORAGE_SERVER_API_KEY"]
 DATABASE_ID = "grateful"
 CONTAINER_ID = "main"
+JOURNAL_DATABASE_ID = "journal"
+JOURNAL_ID_CONTAINER = "journal_container"
 
 
 client = cosmos_client.CosmosClient(
@@ -61,12 +63,62 @@ def list(date: str = None):
 
 
 @app.command()
-def add(content: str):
-    db = client.get_database_client(DATABASE_ID)
-    container = db.get_container_client(CONTAINER_ID)
-    container.create_item(
-        {"id": str(uuid.uuid4()), "user": "testserver", "content": content}
+def read_journal(date: str = "ignored"):
+    # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
+    container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
+        JOURNAL_ID_CONTAINER
     )
+    items = container.query_items("select * FROM c", enable_cross_partition_query=True)
+    first = None
+    for i in items:
+        first = i
+        break
+    ic(first)
+    if first is None:
+        container.create_item(
+            {"id": str(uuid.uuid4()), "user": "testserver", "content": ""}
+        )
+    else:
+        content = first["content"]
+        ic(content)
+        return content
+
+
+@app.command()
+def append_journal(content: str):
+    # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
+    container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
+        JOURNAL_ID_CONTAINER
+    )
+    items = container.query_items("select * FROM c", enable_cross_partition_query=True)
+    first = None
+    for i in items:
+        first = i
+
+    assert first
+    ic(first)
+    ic(content)
+    journal_item = first
+    journal_item["content"] += f"{datetime.now()}: {content}\n"
+    container.upsert_item(journal_item)
+
+
+def clear_journal(content: str = "ignored"):
+    # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
+    container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
+        JOURNAL_ID_CONTAINER
+    )
+    items = container.query_items("select * FROM c", enable_cross_partition_query=True)
+    first = None
+    for i in items:
+        first = i
+
+    assert first
+    ic(first)
+
+    journal_item = first
+    journal_item["content"] = ""
+    container.upsert_item(journal_item)
 
 
 if __name__ == "__main__":
