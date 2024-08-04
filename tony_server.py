@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 from modal import Image, Mount, Secret
 import requests
+import uuid
 
 from fastapi import Depends, HTTPException, Request, status
 
@@ -75,6 +76,11 @@ class FunctionCall(pydantic.BaseModel):
     arguments: Dict
 
 
+def make_vapi_response(call: FunctionCall | str, result: str):
+    tool_call_id = call.id if isinstance(call, FunctionCall) else call
+    return {"results": [{"toolCallId": tool_call_id, "result": result}]}
+
+
 def parse_vapi_call(input) -> FunctionCall | None:
     """Parse the call from VAPI which has the following shape
 
@@ -100,12 +106,19 @@ def parse_vapi_call(input) -> FunctionCall | None:
     )
 
 
+def make_call(name, input: Dict):
+    id = input.get("id", str(uuid.uuid4()))
+    return FunctionCall(id=id, name=name, arguments=input)
+
+
 PPLX_API_KEY_NAME = "PPLX_API_KEY"
 TONY_API_KEY_NAME = "TONY_API_KEY"
 
 
-def raise_if_not_authorized(token):
-    ic(token)
+def raise_if_not_authorized(headers: Dict):
+    token = headers.get(X_VAPI_SECRET, "")
+    if not token:
+        ic(headers)
     if token != os.environ[TONY_API_KEY_NAME]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -123,25 +136,14 @@ def raise_if_not_authorized(token):
 )
 @web_endpoint(method="POST")
 def search(input: Dict, headers=Depends(get_headers)):
-    x_vapi_secret = headers.get(X_VAPI_SECRET, "no secret passed to search")
-
-    tool_call_id = ""
-    question = ""
+    """question: the question"""
 
     ic(input.keys())
-
-    raise_if_not_authorized(x_vapi_secret)
-    if call := parse_vapi_call(input):
-        ic(call)
-        question, tool_call_id = call.arguments["question"], call.id
-
-    if not question:
-        question = input.get("question")
-
-    if not tool_call_id:
-        tool_call_id = input.get("id", "no_id_passed_in")
-
-    ic(tool_call_id, question)
+    raise_if_not_authorized(headers)
+    call = parse_vapi_call(input)
+    if not call:
+        call = make_call("search", input)
+    ic(call)
 
     url = "https://api.perplexity.ai/chat/completions"
     pplx_token = os.getenv(PPLX_API_KEY_NAME)
@@ -152,7 +154,7 @@ def search(input: Dict, headers=Depends(get_headers)):
         "model": "llama-3.1-sonar-large-128k-online",
         "messages": [
             {"role": "system", "content": "Be precise and concise."},
-            {"role": "user", "content": question},
+            {"role": "user", "content": call.arguments["question"]},
         ],
     }
     headers = {
@@ -162,9 +164,20 @@ def search(input: Dict, headers=Depends(get_headers)):
     }
 
     search_response = requests.post(url, json=payload, headers=headers)
-    ic(search_response)
     ic(search_response.json())
     search_answer = search_response.json()["choices"][0]["message"]["content"]
-    response = {"results": [{"toolCallId": tool_call_id, "result": search_answer}]}
-    ic(response)
-    return response
+    vapi_response = make_vapi_response(call, search_answer)
+    ic(vapi_response)
+    return vapi_response
+
+
+@app.function(
+    image=default_image,
+    secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
+)
+@web_endpoint(method="POST")
+def journal_append(input: Dict, headers=Depends(get_headers)):
+    ic(input.keys())
+    raise_if_not_authorized(headers)
+    call = parse_vapi_call(input)
+    return make_vapi_response(call, "journal_append")
