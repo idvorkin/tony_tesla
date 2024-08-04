@@ -64,7 +64,7 @@ class FunctionCall(pydantic.BaseModel):
     arguments: Dict
 
 
-def parse_vapi_call(message) -> FunctionCall:
+def parse_vapi_call(input) -> FunctionCall | None:
     """Parse the call from VAPI which has the following shape
 
     'toolCalls': [{'function': {'arguments': {'question': 'What is the rain in '
@@ -73,6 +73,9 @@ def parse_vapi_call(message) -> FunctionCall:
                  'id': 'toolu_01FDyjjUG1ig7hP9YQ6MQXhX',
                  'type': 'function'}],
     """
+    message = input.get("message", "")
+    if not message:
+        return None
 
     ic(message.keys())
     toolCalls = message["toolCalls"]
@@ -114,8 +117,7 @@ def search(input: Dict, token: HTTPAuthorizationCredentials = Depends(auth_schem
     question = ""
 
     ic(input.keys())
-    if message := input.get("message"):
-        call = parse_vapi_call(message)
+    if call := parse_vapi_call(input):
         ic(call)
         question, tool_call_id = call.arguments["question"], call.id
 
