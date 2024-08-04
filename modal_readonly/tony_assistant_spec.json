@@ -29,7 +29,7 @@
                 "async": false,
                 "server": {
                     "url": "https://idvorkin--modal-tony-server-search.modal.run",
-                    "secret": "$VAPI_SECRET"
+                    "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
                 }
             }
         ],

@@ -62,7 +62,7 @@ def assistant(input: Dict, headers=Depends(get_headers)):
     secret = headers.get(X_VAPI_SECRET, "no secret passed to search")
     # for each tool set the secret
     for tool in tony["assistant"]["model"]["tools"]:
-        tool["secret"] = secret
+        tool["server"]["secret"] = secret
 
     ic(len(tony))
 
