@@ -3,7 +3,7 @@
 
 # import asyncio
 from modal import App, web_endpoint
-from typing import Annotated, Dict
+from typing import Dict
 import os
 from icecream import ic
 from pathlib import Path
@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from modal import Image, Mount, Secret
 import requests
 
-from fastapi import HTTPException, status, Header
+from fastapi import Depends, HTTPException, Request, status
 
 
 default_image = Image.debian_slim(python_version="3.12").pip_install(
@@ -104,18 +104,25 @@ def raise_if_not_authorized(token):
 # x-vapi-secret header -
 
 
+def get_headers(request: Request):
+    ic(request.headers)
+    return request.headers
+
+
 @app.function(
     image=default_image,
     secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
 )
 @web_endpoint(method="POST")
-def search(input: Dict, x_vapi_secret: Annotated[str | None, Header()]):
-    raise_if_not_authorized(x_vapi_secret)
+def search(input: Dict, headers=Depends(get_headers)):
+    x_vapi_secret = headers.get("x-vapi-secret")
 
     tool_call_id = ""
     question = ""
 
     ic(input.keys())
+
+    raise_if_not_authorized(x_vapi_secret)
     if call := parse_vapi_call(input):
         ic(call)
         question, tool_call_id = call.arguments["question"], call.id

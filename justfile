@@ -13,5 +13,10 @@ test-assistant:
 
 test-prod-search:
     http POST https://idvorkin--modal-tony-server-search.modal.run \
-        Authorization:"Bearer $TONY_API_KEY" \
+        x-vapi-secret:$TONY_API_KEY \
+        question="What is the weather in moscow"
+
+test-dev-search:
+    http POST https://idvorkin--modal-tony-server-search-dev.modal.run \
+        x-vapi-secret:$TONY_API_KEY \
         question="What is the weather in moscow"
