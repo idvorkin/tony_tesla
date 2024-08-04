@@ -73,16 +73,20 @@ def assistant(input: Dict, headers=Depends(get_headers)):
 class FunctionCall(pydantic.BaseModel):
     id: str
     name: str
-    arguments: Dict
+    args: Dict
 
 
-def make_vapi_response(call: FunctionCall | str, result: str):
-    tool_call_id = call.id if isinstance(call, FunctionCall) else call
-    return {"results": [{"toolCallId": tool_call_id, "result": result}]}
+def make_vapi_response(call: FunctionCall, result: str):
+    return {"results": [{"toolCallId": call.id, "result": result}]}
 
 
-def parse_vapi_call(input) -> FunctionCall | None:
-    """Parse the call from VAPI which has the following shape
+def make_call(name, input: Dict):
+    id = input.get("id", str(uuid.uuid4()))
+    return FunctionCall(id=id, name=name, args=input)
+
+
+def parse_tool_call(function_name, params: Dict) -> FunctionCall:
+    """Parse the call from VAPI or from the test tool. When from VAPI has the following shape
 
     'toolCalls': [{'function': {'arguments': {'question': 'What is the rain in '
                                                         'Spain?'},
@@ -90,25 +94,22 @@ def parse_vapi_call(input) -> FunctionCall | None:
                  'id': 'toolu_01FDyjjUG1ig7hP9YQ6MQXhX',
                  'type': 'function'}],
     """
-    message = input.get("message", "")
+    message = params.get("message", "")
     if not message:
-        return None
+        ic(params)
+        return make_call(function_name, params)
 
     ic(message.keys())
     toolCalls = message["toolCalls"]
     ic(toolCalls)
     tool = toolCalls[-1]
     ic(tool)
+    # todo validate the function names match.
     return FunctionCall(
         id=tool["id"],
         name=tool["function"]["name"],
-        arguments=tool["function"]["arguments"],
+        args=tool["function"]["arguments"],
     )
-
-
-def make_call(name, input: Dict):
-    id = input.get("id", str(uuid.uuid4()))
-    return FunctionCall(id=id, name=name, arguments=input)
 
 
 PPLX_API_KEY_NAME = "PPLX_API_KEY"
@@ -135,16 +136,11 @@ def raise_if_not_authorized(headers: Dict):
     secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
 )
 @web_endpoint(method="POST")
-def search(input: Dict, headers=Depends(get_headers)):
+def search(params: Dict, headers=Depends(get_headers)):
     """question: the question"""
 
-    ic(input.keys())
     raise_if_not_authorized(headers)
-    call = parse_vapi_call(input)
-    if not call:
-        call = make_call("search", input)
-    ic(call)
-
+    call = parse_tool_call("search", params)
     url = "https://api.perplexity.ai/chat/completions"
     pplx_token = os.getenv(PPLX_API_KEY_NAME)
     auth_line = f"Bearer {pplx_token}"
@@ -154,7 +150,7 @@ def search(input: Dict, headers=Depends(get_headers)):
         "model": "llama-3.1-sonar-large-128k-online",
         "messages": [
             {"role": "system", "content": "Be precise and concise."},
-            {"role": "user", "content": call.arguments["question"]},
+            {"role": "user", "content": call.args["question"]},
         ],
     }
     headers = {
@@ -162,6 +158,8 @@ def search(input: Dict, headers=Depends(get_headers)):
         "content-type": "application/json",
         "authorization": auth_line,
     }
+    ic(payload)
+    ic(headers)
 
     search_response = requests.post(url, json=payload, headers=headers)
     ic(search_response.json())
@@ -176,8 +174,22 @@ def search(input: Dict, headers=Depends(get_headers)):
     secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
 )
 @web_endpoint(method="POST")
-def journal_append(input: Dict, headers=Depends(get_headers)):
-    ic(input.keys())
+def journal_append(params: Dict, headers=Depends(get_headers)):
     raise_if_not_authorized(headers)
-    call = parse_vapi_call(input)
-    return make_vapi_response(call, "journal_append")
+    call = parse_tool_call("journal_append", params)
+    return make_vapi_response(
+        call, f"journal append not implemented yet content:{call.args["content"]}"
+    )
+
+
+@app.function(
+    image=default_image,
+    secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
+)
+@web_endpoint(method="POST")
+def journal_read(params: Dict, headers=Depends(get_headers)):
+    raise_if_not_authorized(headers)
+    call = parse_tool_call("journal_read", params)
+    return make_vapi_response(
+        call, f"journal append not implemented yet date: {call.args["date"]}"
+    )
