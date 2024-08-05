@@ -39,7 +39,7 @@
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "date": {
+                            "content": {
                                 "type": "string"
                             }
                         }
