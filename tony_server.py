@@ -19,13 +19,16 @@ import azure.cosmos.cosmos_client as cosmos_client
 
 from fastapi import Depends, HTTPException, Request, status
 
+PPLX_API_KEY_NAME = "PPLX_API_KEY"
+TONY_API_KEY_NAME = "TONY_API_KEY"
+TONY_STORAGE_SERVER_API_KEY = "TONY_STORAGE_SERVER_API_KEY"
+X_VAPI_SECRET = "x-vapi-secret"
+TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
 default_image = Image.debian_slim(python_version="3.12").pip_install(
     ["icecream", "requests", "pydantic", "azure-cosmos"]
 )
 
-X_VAPI_SECRET = "x-vapi-secret"
-TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
 app = App("modal-tony-server")
 
@@ -40,6 +43,7 @@ def get_headers(request: Request):
 @app.function(
     image=default_image,
     mounts=[Mount.from_local_dir(modal_storage, remote_path="/" + modal_storage)],
+    secrets=[Secret.from_name(TONY_STORAGE_SERVER_API_KEY)],
 )
 @web_endpoint(method="POST")
 def assistant(input: Dict, headers=Depends(get_headers)):
@@ -50,10 +54,14 @@ def assistant(input: Dict, headers=Depends(get_headers)):
     tony_prompt = (base / "tony_system_prompt.md").read_text()
     # Add context to system prompt
     time_in_pst = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
+    journal_content = trusted_journal_read()
     extra_state = f"""
 <CurrentState>
     Date and Time: {time_in_pst}
     Igor's Location: Seattle
+    <JournalContent>
+        {journal_content}
+    </JournalContent>
 </CurrentState>
     """
     tony_prompt += extra_state
@@ -113,10 +121,6 @@ def parse_tool_call(function_name, params: Dict) -> FunctionCall:
     )
 
 
-PPLX_API_KEY_NAME = "PPLX_API_KEY"
-TONY_API_KEY_NAME = "TONY_API_KEY"
-
-
 def raise_if_not_authorized(headers: Dict):
     token = headers.get(X_VAPI_SECRET, "")
     if not token:
@@ -170,7 +174,6 @@ def search(params: Dict, headers=Depends(get_headers)):
     return vapi_response
 
 
-TONY_STORAGE_SERVER_API_KEY = "TONY_STORAGE_SERVER_API_KEY"
 DB_HOST = "https://tonyserver.documents.azure.com:443/"
 DATABASE_ID = "grateful"
 CONTAINER_ID = "main"
@@ -211,21 +214,11 @@ def journal_append(params: Dict, headers=Depends(get_headers)):
     return make_vapi_response(call, "success")
 
 
-@app.function(
-    image=default_image,
-    secrets=[
-        Secret.from_name(TONY_API_KEY_NAME),
-        Secret.from_name(TONY_STORAGE_SERVER_API_KEY),
-    ],
-)
-@web_endpoint(method="POST")
-def journal_read(params: Dict, headers=Depends(get_headers)):
-    raise_if_not_authorized(headers)
-    call = parse_tool_call("journal_read", params)
+def trusted_journal_read():
     client = cosmos_client.CosmosClient(
         DB_HOST,
         {"masterKey": os.environ[TONY_STORAGE_SERVER_API_KEY]},
-        user_agent="storage.py",
+        user_agent="tony_server.py",
         user_agent_overwrite=True,
     )
     container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
@@ -238,4 +231,19 @@ def journal_read(params: Dict, headers=Depends(get_headers)):
         break
     ic(first)
     content = first["content"]
+    return content
+
+
+@app.function(
+    image=default_image,
+    secrets=[
+        Secret.from_name(TONY_API_KEY_NAME),
+        Secret.from_name(TONY_STORAGE_SERVER_API_KEY),
+    ],
+)
+@web_endpoint(method="POST")
+def journal_read(params: Dict, headers=Depends(get_headers)):
+    raise_if_not_authorized(headers)
+    call = parse_tool_call("journal_read", params)
+    content = trusted_journal_read()
     return make_vapi_response(call, f"{content}")
