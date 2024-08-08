@@ -206,7 +206,8 @@ def journal_append(params: Dict, headers=Depends(get_headers)):
     ic(first)
     journal_item = first
     journal_item["content"] += f"{datetime.datetime.now()}: {call.args["content"]}\n"
-    container.upsert_item(journal_item)
+    ret = container.upsert_item(journal_item)
+    ic(ret)
     return make_vapi_response(call, "success")
 
 

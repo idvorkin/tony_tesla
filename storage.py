@@ -103,6 +103,17 @@ def append_journal(content: str):
     container.upsert_item(journal_item)
 
 
+@app.command()
+def list_journal():
+    # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
+    container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
+        JOURNAL_ID_CONTAINER
+    )
+    items = container.query_items("select * FROM c", enable_cross_partition_query=True)
+    for item in items:
+        ic(item)
+
+
 def clear_journal(content: str = "ignored"):
     # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
     container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
