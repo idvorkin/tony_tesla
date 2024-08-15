@@ -1,15 +1,17 @@
 #!python3
 
 
+from pydantic import BaseModel
 import typer
 from loguru import logger
 from rich.console import Console
 from icecream import ic
 from datetime import datetime, timedelta
 import azure.cosmos.cosmos_client as cosmos_client
-import uuid
+from uuid import uuid4
 import os
 import dateutil.parser
+from pathlib import Path
 
 console = Console()
 app = typer.Typer()
@@ -37,7 +39,7 @@ client = cosmos_client.CosmosClient(
 
 
 @app.command()
-def list(date: str = None):
+def all_files(date: str = None):
     """
     List all files in the storage directory after a given date.
     If no date is provided, it defaults to 2 days ago.
@@ -61,27 +63,61 @@ def list(date: str = None):
         ts = datetime.fromtimestamp(item["_ts"])
         ic(ts.strftime("%B %d, %Y %I:%M:%S"), item)
 
+class JournalItemModel(BaseModel):
+    id: str
+    user: str
+    content: str
 
 @app.command()
-def read_journal(date: str = "ignored"):
+def read_journal(_: str = "ignored"):
     # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
     container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
         JOURNAL_ID_CONTAINER
     )
-    items = container.query_items("select * FROM c", enable_cross_partition_query=True)
-    first = None
-    for i in items:
-        first = i
-        break
-    ic(first)
-    if first is None:
+    items = [JournalItemModel(**item ) for item in container.read_all_items()]
+    if len(items) == 0:
+        print("No items yet, creating initial one")
         container.create_item(
-            {"id": str(uuid.uuid4()), "user": "testserver", "content": ""}
+            JournalItemModel(id = str(uuid4()), user = "test", content = "").model_dump()
         )
-    else:
-        content = first["content"]
-        ic(content)
-        return content
+        return
+
+    if len(items) != 1:
+        print("more then one journal entry -- oops")
+        ic(items)
+        return
+
+    content = items[0].content
+    print(content)
+    return content
+
+@app.command()
+def replace_journal(new_journal_path: str = "ignored"):
+    # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
+    container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
+        JOURNAL_ID_CONTAINER
+    )
+    items = [JournalItemModel(**item ) for item in container.read_all_items()]
+    if len(items) != 1:
+        print("more then one journal entry -- oops")
+        ic(items)
+        return
+
+    # Get the content of the first element.
+    original_journal_content = items[0].content
+
+    # backup the elesment
+    date_string = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    Path(f"backup.journal.{date_string}.txt").write_text(original_journal_content)
+
+    new_journal_content = Path(new_journal_path).read_text()
+    if not len(new_journal_content) > 10:
+        ic ("too short:", new_journal_content)
+        return
+
+    updated_journal_item = items[0].model_copy()
+    updated_journal_item.content = new_journal_content
+    container.upsert_item(updated_journal_item.model_dump())
 
 
 @app.command()
