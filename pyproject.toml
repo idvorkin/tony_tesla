@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tony_tesla"
+version = "0.1.0"
+description = "A short description of your project"
+authors = [
+    { name="Your Name", email="your.email@example.com" }
+]
+license = { text = "MIT" }
+readme = "README.md"
+dependencies = [
+    "icecream",
+    "rich",
+    "pydantic",
+    "loguru",
+    "langchain",
+    "httpx",
+    "fastapi",
+    "azure-cosmos",
+    "typer",
+    "requests",
+    "python-dateutil",
+    "pathlib",
+    "modal"
+]
+
+[project.optional-dependencies]
+dev = []
+
+[tool.setuptools]
+py-modules = ["tony", "storage"]
+
+[project.scripts]
+storage = "storage:app"
+tony = "tony:app"
