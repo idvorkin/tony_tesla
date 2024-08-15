@@ -14,7 +14,7 @@ import dateutil.parser
 from pathlib import Path
 
 console = Console()
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 
 
 @logger.catch()
