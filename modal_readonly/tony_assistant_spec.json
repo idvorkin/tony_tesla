@@ -1,106 +1,98 @@
 {
-    "assistant":
-{
+  "assistant": {
     "name": "Tony",
     "voice": {
-        "voiceId": "IKne3meq5aSn9XLyUdCD",
-        "provider": "11labs",
-        "stability": 0.5,
-        "similarityBoost": 0.75
+      "voiceId": "IKne3meq5aSn9XLyUdCD",
+      "provider": "11labs",
+      "stability": 0.5,
+      "similarityBoost": 0.75
     },
     "model": {
-        "model": "gpt-4o-2024-08-06",
-        "provider": "openai",
-        "tools": [
-            {
-                "type": "function",
-                "function": {
-                    "name": "journal_read",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "date": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "description": "Read the users journal"
-                },
-                "async": false,
-                "server": {
-                    "url": "https://idvorkin--modal-tony-server-journal-read.modal.run",
-                    "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+      "model": "gpt-4o-2024-08-06",
+      "provider": "openai",
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "journal_read",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string"
                 }
+              }
             },
-            {
-                "type": "function",
-                "function": {
-                    "name": "journal_append",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "content": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "description": "Append an entry to the users journal"
-                },
-                "async": true,
-                "server": {
-                    "url": "https://idvorkin--modal-tony-server-journal-append.modal.run",
-                    "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+            "description": "Read the users journal"
+          },
+          "async": false,
+          "server": {
+            "url": "https://idvorkin--modal-tony-server-journal-read.modal.run",
+            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "journal_append",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "content": {
+                  "type": "string"
                 }
+              }
             },
-            {
-                "type": "function",
-                "function": {
-                    "name": "search",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "question": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "description": "Search the internet"
-                },
-                "async": false,
-                "server": {
-                    "url": "https://idvorkin--modal-tony-server-search.modal.run",
-                    "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+            "description": "Append an entry to the users journal"
+          },
+          "async": true,
+          "server": {
+            "url": "https://idvorkin--modal-tony-server-journal-append.modal.run",
+            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "search",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string"
                 }
-            }
-        ],
-        "maxTokens": 150,
-        "temperature": 1.0,
-        "messages": [
-            {
-                "role": "system",
-                "content": "REPLACE ME"
-            }
-        ]
+              }
+            },
+            "description": "Search the internet"
+          },
+          "async": false,
+          "server": {
+            "url": "https://idvorkin--modal-tony-server-search.modal.run",
+            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+          }
+        }
+      ],
+      "maxTokens": 150,
+      "temperature": 1.0,
+      "messages": [
+        {
+          "role": "system",
+          "content": "REPLACE ME"
+        }
+      ]
     },
     "recordingEnabled": true,
     "firstMessage": "Tony Here. What can I do you for?",
     "voicemailMessage": "Hi, you've reached Leo at SmartHome Innovations. Sorry I missed your call. Please leave a message, and I'll get back to you as soon as possible.",
     "endCallFunctionEnabled": true,
     "transcriber": {
-        "model": "nova-2",
-        "language": "en",
-        "provider": "deepgram"
+      "model": "nova-2",
+      "language": "en",
+      "provider": "deepgram"
     },
-    "serverMessages": [
-        "function-call"
-    ],
+    "serverMessages": ["function-call"],
     "dialKeypadFunctionEnabled": false,
-    "endCallPhrases": [
-        "bye for now",
-        "talk soon",
-        "hang up",
-        "end call"
-    ],
+    "endCallPhrases": ["bye for now", "talk soon", "hang up", "end call"],
     "hipaaEnabled": false
-}
+  }
 }
