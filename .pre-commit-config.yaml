@@ -10,3 +10,7 @@ repos:
     # Run the formatter.
     - id: ruff-format
       types_or: [ python, pyi, jupyter ]
+- repo: https://github.com/TomWright/dasel
+  rev: v2.8.1
+  hooks:
+    - id: dasel-validate
