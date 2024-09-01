@@ -74,6 +74,7 @@
       ],
       "maxTokens": 150,
       "temperature": 1.0,
+      "emotionRecognitionEnabled":true,
       "messages": [
         {
           "role": "system",
