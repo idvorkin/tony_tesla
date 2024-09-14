@@ -1,23 +1,22 @@
 #!python3
 
 
-# import asyncio
-from modal import App, web_endpoint
-from typing import Dict
-import os
-from icecream import ic
-from pathlib import Path
-import json
 import datetime
-import pydantic
+import json
+import os
+import uuid
+from pathlib import Path
+from typing import Dict
 from zoneinfo import ZoneInfo
 
-from modal import Image, Mount, Secret
-import requests
-import uuid
 import azure.cosmos.cosmos_client as cosmos_client
-
+import pydantic
+import requests
 from fastapi import Depends, HTTPException, Request, status
+from icecream import ic
+
+# import asyncio
+from modal import App, Image, Mount, Secret, web_endpoint
 
 PPLX_API_KEY_NAME = "PPLX_API_KEY"
 TONY_API_KEY_NAME = "TONY_API_KEY"
@@ -174,9 +173,10 @@ def search(params: Dict, headers=Depends(get_headers)):
     ic(vapi_response)
     return vapi_response
 
+
 @app.function(
     image=default_image,
-    secrets=[Secret.from_name(ONEBUSAWAY_API_KEY)],
+    secrets=[Secret.from_name(ONEBUSAWAY_API_KEY), Secret.from_name(TONY_API_KEY_NAME)],
 )
 @web_endpoint(method="POST")
 def library_arrivals(params: Dict, headers=Depends(get_headers)):
@@ -185,16 +185,18 @@ def library_arrivals(params: Dict, headers=Depends(get_headers)):
     raise_if_not_authorized(headers)
     call = parse_tool_call("library_arrivals", params)
     client = onebusaway.OnebusawaySDK(
-    api_key=os.environ.get(ONEBUSAWAY_API_KEY),
-)
+        api_key=os.environ.get(ONEBUSAWAY_API_KEY),
+    )
     response = client.arrival_and_departure.list("1_29249")
     trips = response.data.entry.arrivals_and_departures
-    arrivals:list[str] = []
+    arrivals: list[str] = []
     for trip in trips:
         at_time = trip.predicted_arrival_time / 1000
-        at_time_pst = datetime.datetime.fromtimestamp(at_time).astimezone(pytz.timezone('US/Pacific'))
-        at_time_pst = at_time_pst.strftime('%I:%M %p')
-        arrivals.append(f"{trip.trip_headsign} arriving at {at_time_pst}")
+        at_time_pst = datetime.datetime.fromtimestamp(
+            at_time, tz=ZoneInfo("America/Los_Angeles")
+        )
+        at_time_pst_str = at_time_pst.strftime("%I:%M %p")
+        arrivals.append(f"{trip.trip_headsign} arriving at {at_time_pst_str}")
         ic(trip)
     vapi_response = make_vapi_response(call, str(arrivals))
     ic(vapi_response)

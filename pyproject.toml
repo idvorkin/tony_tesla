@@ -32,8 +32,9 @@ dependencies = [
 dev = []
 
 [tool.setuptools]
-py-modules = ["tony", "storage"]
+py-modules = ["tony", "storage", "bus"]
 
 [project.scripts]
 storage = "storage:app"
 tony = "tony:app"
+bus = "bus:app"
