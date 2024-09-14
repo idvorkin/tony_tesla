@@ -21,12 +21,13 @@ from fastapi import Depends, HTTPException, Request, status
 
 PPLX_API_KEY_NAME = "PPLX_API_KEY"
 TONY_API_KEY_NAME = "TONY_API_KEY"
+ONEBUSAWAY_API_KEY = "ONEBUSAWAY_API_KEY"
 TONY_STORAGE_SERVER_API_KEY = "TONY_STORAGE_SERVER_API_KEY"
 X_VAPI_SECRET = "x-vapi-secret"
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
 default_image = Image.debian_slim(python_version="3.12").pip_install(
-    ["icecream", "requests", "pydantic", "azure-cosmos"]
+    ["icecream", "requests", "pydantic", "azure-cosmos", "onebusaway"]
 )
 
 
@@ -170,6 +171,32 @@ def search(params: Dict, headers=Depends(get_headers)):
     ic(search_response.json())
     search_answer = search_response.json()["choices"][0]["message"]["content"]
     vapi_response = make_vapi_response(call, search_answer)
+    ic(vapi_response)
+    return vapi_response
+
+@app.function(
+    image=default_image,
+    secrets=[Secret.from_name(ONEBUSAWAY_API_KEY)],
+)
+@web_endpoint(method="POST")
+def library_arrivals(params: Dict, headers=Depends(get_headers)):
+    import onebusaway
+
+    raise_if_not_authorized(headers)
+    call = parse_tool_call("library_arrivals", params)
+    client = onebusaway.OnebusawaySDK(
+    api_key=os.environ.get(ONEBUSAWAY_API_KEY),
+)
+    response = client.arrival_and_departure.list("1_29249")
+    trips = response.data.entry.arrivals_and_departures
+    arrivals:list[str] = []
+    for trip in trips:
+        at_time = trip.predicted_arrival_time / 1000
+        at_time_pst = datetime.datetime.fromtimestamp(at_time).astimezone(pytz.timezone('US/Pacific'))
+        at_time_pst = at_time_pst.strftime('%I:%M %p')
+        arrivals.append(f"{trip.trip_headsign} arriving at {at_time_pst}")
+        ic(trip)
+    vapi_response = make_vapi_response(call, str(arrivals))
     ic(vapi_response)
     return vapi_response
 

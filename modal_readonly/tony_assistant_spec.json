@@ -34,6 +34,21 @@
         {
           "type": "function",
           "function": {
+            "name": "library_arrivals",
+            "parameters": {
+              }
+            },
+            "description": "Get the arrival time for the next bus to Garfield, at the libray stop "
+          },
+          "async": false,
+          "server": {
+            "url": "https://idvorkin--modal-tony-server-library-arrivals.modal.run",
+            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+          }
+        },
+        {
+          "type": "function",
+          "function": {
             "name": "journal_append",
             "parameters": {
               "type": "object",
