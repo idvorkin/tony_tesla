@@ -14,6 +14,19 @@
         {
           "type": "function",
           "function": {
+            "name": "library_arrivals",
+            "parameters": {},
+            "description": "Get bus arrivals at the library which takes Igor to Garfield"
+          },
+          "async": false,
+          "server": {
+            "url": "https://idvorkin--modal-tony-server-library-arrivals.modal.run",
+            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+          }
+        },
+        {
+          "type": "function",
+          "function": {
             "name": "journal_read",
             "parameters": {
               "type": "object",
@@ -28,21 +41,6 @@
           "async": false,
           "server": {
             "url": "https://idvorkin--modal-tony-server-journal-read.modal.run",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        },
-        {
-          "type": "function",
-          "function": {
-            "name": "library_arrivals",
-            "parameters": {
-              }
-            },
-            "description": "Get the arrival time for the next bus to Garfield, at the libray stop "
-          },
-          "async": false,
-          "server": {
-            "url": "https://idvorkin--modal-tony-server-library-arrivals.modal.run",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -89,7 +87,7 @@
       ],
       "maxTokens": 150,
       "temperature": 1.0,
-      "emotionRecognitionEnabled":true,
+      "emotionRecognitionEnabled": true,
       "messages": [
         {
           "role": "system",

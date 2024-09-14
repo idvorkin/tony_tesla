@@ -4,7 +4,7 @@
 import asyncio
 
 from langchain_core import messages
-from langchain_core.pydantic_v1 import BaseModel
+from pydantic import BaseModel
 
 import typer
 from langchain.prompts import ChatPromptTemplate
