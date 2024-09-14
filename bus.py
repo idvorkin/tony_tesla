@@ -7,7 +7,6 @@ import os
 from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
-import pytz
 
 import httpx
 import typer
@@ -18,6 +17,7 @@ from rich.console import Console
 import onebusaway
 import asyncio
 import time
+from zoneinfo import ZoneInfo
 
 
 console = Console()
@@ -150,7 +150,7 @@ def stops_for_route(route: str):
             if not stop_time_update.arrival:
                 continue
             arrival_time = stop_time_update.arrival.time
-            arrival_time_pst = datetime.fromtimestamp(arrival_time).astimezone(pytz.timezone('US/Pacific'))
+            arrival_time_pst = datetime.fromtimestamp(arrival_time, tz=ZoneInfo("America/Los_Angeles"))
             # make arrivat time just 07:43 pm
             arrival_time_pst = arrival_time_pst.strftime('%I:%M %p')
             # include the direction_id  
@@ -158,7 +158,7 @@ def stops_for_route(route: str):
             print(f"{stop_name} - {arrival_time_pst} - {direction_id} - {stop_id}")
 
 @app.command()
-def library_stops():
+def library():
     client = onebusaway.OnebusawaySDK(
     api_key=os.environ.get("ONEBUSAWAY_API_KEY"),
 )
