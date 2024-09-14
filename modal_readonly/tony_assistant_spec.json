@@ -15,7 +15,14 @@
           "type": "function",
           "function": {
             "name": "library_arrivals",
-            "parameters": {},
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "unused": {
+                  "type": "string"
+                }
+              }
+            },
             "description": "Get bus arrivals at the library which takes Igor to Garfield"
           },
           "async": false,
