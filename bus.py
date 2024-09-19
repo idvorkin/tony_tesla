@@ -3,7 +3,7 @@
 
 import csv
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 
@@ -198,8 +198,10 @@ def library():
     for arrival in library_arrivals:
         at_time = arrival.predicted_arrival_time / 1000
         at_time_pst = datetime.fromtimestamp(at_time)
-        at_time_pst = at_time_pst.strftime("%I:%M %p")
-        print(f" {at_time_pst} - {arrival.route_short_name} to {arrival.trip_headsign}")
+        # Add 2 minutes buffer
+        at_time_pst += timedelta(minutes=2)
+        at_time_pst_str = at_time_pst.strftime("%I:%M %p")
+        print(f" {at_time_pst_str} - {arrival.route_short_name} to {arrival.trip_headsign}")
         # ic(trip)
 
 
