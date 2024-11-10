@@ -147,12 +147,12 @@ def last_transcript():
 
 
 @app.command()
-def export_vapi_tony_config():
+def export_vapi_tony_config(assistant_id=TONY_ASSISTANT_ID):
     headers = {
         "authorization": f"{os.environ['VAPI_API_KEY']}",
     }
     tony = httpx.get(
-        f"https://api.vapi.ai/assistant/{TONY_ASSISTANT_ID}", headers=headers
+        f"https://api.vapi.ai/assistant/{assistant_id}", headers=headers
     ).json()
     print(json.dumps(tony, indent=4))
 
