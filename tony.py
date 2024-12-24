@@ -106,6 +106,7 @@ def vapi_calls() -> list[Call]:
 
 @app.command()
 def debug_loader():
+    """Load and debug the Tony assistant configuration."""
     base = Path("modal_readonly")
     assistant_txt = (base / "tony_assistant_spec.json").read_text()
     tony = json.loads(assistant_txt)
@@ -126,6 +127,7 @@ weather:
 
 @app.command()
 def calls():
+    """List all recent VAPI calls with their details."""
     calls = vapi_calls()
     ic(len(calls))
     for call in calls:
@@ -136,6 +138,7 @@ def calls():
 
 @app.command()
 def last_transcript():
+    """Show the transcript of the most recent call."""
     headers = {
         "authorization": f"{os.environ['VAPI_API_KEY']}",
         "createdAtGE": (datetime.now() - timedelta(days=1)).isoformat(),
@@ -148,6 +151,7 @@ def last_transcript():
 
 @app.command()
 def export_vapi_tony_config(assistant_id=TONY_ASSISTANT_ID):
+    """Export the current VAPI Tony assistant configuration."""
     headers = {
         "authorization": f"{os.environ['VAPI_API_KEY']}",
     }
@@ -159,6 +163,7 @@ def export_vapi_tony_config(assistant_id=TONY_ASSISTANT_ID):
 
 @app.command()
 def update_tony():
+    """Update the Tony assistant configuration in VAPI."""
     headers = {
         "authorization": f"{os.environ['VAPI_API_KEY']}",
     }
@@ -192,6 +197,7 @@ def update_tony():
 def parse_calls(
     trace: bool = False,
 ):
+    """Parse and analyze recent calls for todos and reminders."""
     langchain_helper.langsmith_trace_if_requested(
         trace, lambda: asyncio.run(a_parse_calls())
     )
@@ -199,6 +205,7 @@ def parse_calls(
 
 @app.command()
 def local_parse_config():
+    """Parse the local Tony assistant configuration files."""
     modal_storage = "modal_readonly"
     base = Path(f"{modal_storage}")
     assistant_txt = (base / "tony_assistant_spec.json").read_text(

@@ -136,6 +136,7 @@ def get_stops():
 
 @app.command()
 def stops_for_route(route: str):
+    """List all stops and arrival times for a given route number."""
     route_id = get_routes()[route].route_id
     trip_updates = get_trip_updates()
     the_route = get_routes()[route]
@@ -178,6 +179,7 @@ def stops_for_route(route: str):
 
 @app.command()
 def library():
+    """Show upcoming bus arrivals at the library stop."""
     client = onebusaway.OnebusawaySDK()
     # r2 = client.stops_for_route.list("1_100228")
     # stops = r2.data.entry
@@ -203,6 +205,7 @@ def library():
 
 @app.command()
 def get_latest_data():
+    """Download the latest transit data files from King County Metro."""
     async def download_file(url, filename):
         async with httpx.AsyncClient() as client:
             response = await client.get(url)

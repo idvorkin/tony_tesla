@@ -70,6 +70,7 @@ class JournalItemModel(BaseModel):
 
 @app.command()
 def read_journal(_: str = "ignored"):
+    """Read the current journal content."""
     # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
     container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
         JOURNAL_ID_CONTAINER
@@ -93,6 +94,8 @@ def read_journal(_: str = "ignored"):
 
 @app.command()
 def replace_journal(new_journal_path: str = "ignored"):
+    """Replace the journal content with content from the specified file path.
+    Creates a backup of the current content before replacing."""
     # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
     container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
         JOURNAL_ID_CONTAINER
@@ -122,6 +125,7 @@ def replace_journal(new_journal_path: str = "ignored"):
 
 @app.command()
 def append_journal(content: str):
+    """Append new content to the journal with current timestamp."""
     # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
     container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
         JOURNAL_ID_CONTAINER
@@ -141,6 +145,7 @@ def append_journal(content: str):
 
 @app.command()
 def list_journal():
+    """List all journal entries in the database."""
     # container = client.get_database_client(DATABASE_ID).create_container_if_not_exists(JOURNAL_ID_CONTAINER,"user")
     container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
         JOURNAL_ID_CONTAINER
