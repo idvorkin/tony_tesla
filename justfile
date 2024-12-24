@@ -3,6 +3,12 @@
 set export
 tony_server := "tony_server.py"
 
+install:
+    uv pip install --editable .
+
+global-install: install
+    pipxu install -f . --editable --python $(which python3.12)
+
 run-dev-server:
     modal serve {{tony_server}}
 deploy:
