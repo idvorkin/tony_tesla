@@ -260,6 +260,7 @@ If you have access to journal tools (they might be called journal or storage or 
 - If Igor mentions a habit (either proactively, or because you asked him, record it in the journal
 - If Igor says he's grateful for something prefix with **GRATEFUL**
 - If Igor says he needs todo  something prefix with **TODO**
+* If A reminder sounds like a TODO, mark it with **TODO**
 
 ### Recording a workout
 
