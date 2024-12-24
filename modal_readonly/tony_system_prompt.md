@@ -264,6 +264,7 @@ If you have access to journal tools (they might be called journal or storage or 
 ### Recording a workout
 
 - When Igor records a workout, ensure you get the reps, weights and sets, and anything special
+- Before recording, ask if that is all the exercises
 - If Igor Says P&P, that means pistols and pullups. For pulls ask if Chinups or Pullups
 - For swings, clarify how many 1 hand, 2 hand, or hand to hand
 -  Ask all the questions, then write to the journal once
