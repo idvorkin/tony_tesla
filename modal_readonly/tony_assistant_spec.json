@@ -5,10 +5,11 @@
       "voiceId": "IKne3meq5aSn9XLyUdCD",
       "provider": "11labs",
       "stability": 0.5,
-      "similarityBoost": 0.75
+      "similarityBoost": 0.75,
+      "model": "eleven_flash_v2"
     },
     "model": {
-      "model": "gpt-4o-2024-08-06",
+      "model": "gpt-4o-2024-11-20",
       "provider": "openai",
       "tools": [
         {
