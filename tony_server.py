@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Dict, Optional
 from zoneinfo import ZoneInfo
 from pydantic import BaseModel, Field
+import httpx
+import asyncio
 
 import azure.cosmos.cosmos_client as cosmos_client
 import pydantic
@@ -42,13 +44,35 @@ def get_headers(request: Request):
     return request.headers
 
 
+async def warm_up_endpoints(secret: str):
+    """Fire and forget calls to warm up the endpoints."""
+    async with httpx.AsyncClient() as client:
+        base_url = "https://idvorkin--modal-tony-server"
+        headers = {"x-vapi-secret": secret}
+        
+        # Prepare warm-up calls
+        tasks = [
+            client.post(f"{base_url}-search.modal.run", 
+                       json={"question": "warm up"}, 
+                       headers=headers),
+            client.post(f"{base_url}-library-arrivals.modal.run", 
+                       json={}, 
+                       headers=headers),
+            client.post("https://idvorkin--modal-blog-server-blog-handler.modal.run",
+                       json={"action": "blog_info"},
+                       headers=headers)
+        ]
+        
+        # Execute calls without waiting for response
+        await asyncio.gather(*tasks, return_exceptions=True)
+
 @app.function(
-    image=default_image,
+    image=default_image.pip_install(["httpx"]),
     mounts=[Mount.from_local_dir(modal_storage, remote_path="/" + modal_storage)],
     secrets=[Secret.from_name(TONY_STORAGE_SERVER_API_KEY)],
 )
 @web_endpoint(method="POST")
-def assistant(input: Dict, headers=Depends(get_headers)):
+async def assistant(input: Dict, headers=Depends(get_headers)):
     ic(input)
     base = Path(f"/{modal_storage}")
     assistant_txt = (base / "tony_assistant_spec.json").read_text()
@@ -72,6 +96,8 @@ def assistant(input: Dict, headers=Depends(get_headers)):
     tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
 
     secret = headers.get(X_VAPI_SECRET, "no secret passed to search")
+    # Fire off warm-up calls without waiting
+    asyncio.create_task(warm_up_endpoints(secret))
     # for each tool set the secret
     for tool in tony["assistant"]["model"]["tools"]:
         tool["server"]["secret"] = secret
