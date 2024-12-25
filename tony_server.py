@@ -4,10 +4,12 @@
 import datetime
 import json
 import os
+import random
 import uuid
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 from zoneinfo import ZoneInfo
+from pydantic import BaseModel, Field
 
 import azure.cosmos.cosmos_client as cosmos_client
 import pydantic
@@ -26,7 +28,7 @@ X_VAPI_SECRET = "x-vapi-secret"
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
 default_image = Image.debian_slim(python_version="3.12").pip_install(
-    ["icecream", "requests", "pydantic", "azure-cosmos", "onebusaway"]
+    ["icecream", "requests", "pydantic", "azure-cosmos", "onebusaway", "fastapi[standard]"]
 )
 
 
@@ -243,6 +245,7 @@ def journal_append(params: Dict, headers=Depends(get_headers)):
     return make_vapi_response(call, "success")
 
 
+
 def trusted_journal_read():
     client = cosmos_client.CosmosClient(
         DB_HOST,
@@ -276,3 +279,4 @@ def journal_read(params: Dict, headers=Depends(get_headers)):
     call = parse_tool_call("journal_read", params)
     content = trusted_journal_read()
     return make_vapi_response(call, f"{content}")
+
