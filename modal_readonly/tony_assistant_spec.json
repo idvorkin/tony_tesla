@@ -164,6 +164,29 @@
             "url": "https://idvorkin--modal-blog-server-blog-handler.modal.run",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "random_blog_url_only",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": ["random_blog_url_only"],
+                  "default": "random_blog_url_only"
+                }
+              },
+              "required": ["action"]
+            },
+            "description": "Get just the URL of a random blog post from Igor's blog without its content"
+          },
+          "async": false,
+          "server": {
+            "url": "https://idvorkin--modal-blog-server-blog-handler.modal.run",
+            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+          }
         }
       ],
       "maxTokens": 150,

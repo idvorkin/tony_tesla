@@ -156,5 +156,24 @@ def blog_handler(params: Dict, headers=Depends(get_headers)):
             ic(f"Error getting blog post: {e}")
             return make_vapi_response(call, f"Error getting blog post: {str(e)}")
     
+    elif action == "random_blog_url_only":
+        import random
+        blog = BlogReader()
+        url_info = blog.get_url_info()
+        
+        posts_with_markdown = [info for info in url_info.values() if info.markdown_path]
+        
+        if not posts_with_markdown:
+            return make_vapi_response(call, "No blog posts with markdown found")
+        
+        random_post = random.choice(posts_with_markdown)
+        
+        result = {
+            "title": random_post.title,
+            "url": f"https://idvork.in{random_post.url}"
+        }
+        
+        return make_vapi_response(call, str(result))
+
     else:
         return make_vapi_response(call, f"Unknown action: {action}")
