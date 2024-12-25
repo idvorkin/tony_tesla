@@ -62,3 +62,8 @@ deploy-blog:
 
 run-dev-blog-server:
     modal serve blog_server.py
+
+test-random-blog-url:
+    http POST https://idvorkin--modal-blog-server-blog-handler.modal.run \
+        x-vapi-secret:$TONY_API_KEY \
+        action="random_blog_url_only"
