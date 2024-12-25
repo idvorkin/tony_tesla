@@ -38,3 +38,27 @@ test-search-dev:
     http POST https://idvorkin--modal-tony-server-search-dev.modal.run \
         x-vapi-secret:$TONY_API_KEY \
         question="What is the weather in moscow"
+
+test-blog-info:
+    http POST https://idvorkin--modal-blog-server-blog-handler.modal.run \
+        x-vapi-secret:$TONY_API_KEY \
+        action="blog_info"
+
+test-random-blog:
+    http POST https://idvorkin--modal-blog-server-blog-handler.modal.run \
+        x-vapi-secret:$TONY_API_KEY \
+        action="random_blog"
+
+test-blog-post:
+    http POST https://idvorkin--modal-blog-server-blog-handler.modal.run \
+        x-vapi-secret:$TONY_API_KEY \
+        action="blog_post_from_path" \
+        markdown_path="_d/vim_tips.md"
+
+deploy-all: deploy deploy-blog
+
+deploy-blog:
+    modal deploy blog_server.py
+
+run-dev-blog-server:
+    modal serve blog_server.py

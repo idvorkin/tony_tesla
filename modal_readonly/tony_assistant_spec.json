@@ -91,6 +91,79 @@
             "url": "https://idvorkin--modal-tony-server-search.modal.run",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
+        },
+        {
+          "type": "function", 
+          "function": {
+            "name": "blog_info",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": ["blog_info"],
+                  "default": "blog_info"
+                }
+              },
+              "required": ["action"]
+            },
+            "description": "Get information about posts on Igor's blog including URLs, titles, and descriptions"
+          },
+          "async": false,
+          "server": {
+            "url": "https://idvorkin--modal-blog-server-blog-handler.modal.run",
+            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "random_blog", 
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": ["random_blog"],
+                  "default": "random_blog"
+                }
+              },
+              "required": ["action"]
+            },
+            "description": "Get the content of a random blog post from Igor's blog"
+          },
+          "async": false,
+          "server": {
+            "url": "https://idvorkin--modal-blog-server-blog-handler.modal.run",
+            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "blog_post_from_path",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": ["blog_post_from_path"],
+                  "default": "blog_post_from_path"
+                },
+                "markdown_path": {
+                  "type": "string",
+                  "description": "The path to the markdown file in the GitHub repository"
+                }
+              },
+              "required": ["action", "markdown_path"]
+            },
+            "description": "Get the content of a specific blog post from Igor's blog using its markdown path"
+          },
+          "async": false,
+          "server": {
+            "url": "https://idvorkin--modal-blog-server-blog-handler.modal.run",
+            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+          }
         }
       ],
       "maxTokens": 150,
