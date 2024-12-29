@@ -3,6 +3,7 @@
 
 import asyncio
 
+from typing import Annotated
 from langchain_core import messages
 from pydantic import BaseModel
 
