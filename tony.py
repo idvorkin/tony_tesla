@@ -95,8 +95,10 @@ def parse_call(call) -> Call:
     transcript = call.get("artifact", {}).get("transcript", "")
     summary = call.get("analysis", {}).get("summary", "")
 
-    # Get cost, defaulting to 0
-    cost = call.get("cost", {}).get("total", 0.0)
+    # Get cost, handling both direct float and nested dict cases
+    cost = call.get("cost", 0.0)
+    if isinstance(cost, dict):
+        cost = cost.get("total", 0.0)
 
     return Call(
         Caller=customer,
