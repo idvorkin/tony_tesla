@@ -159,32 +159,33 @@ def calls(
 ):
     """List all recent VAPI calls with their details."""
     calls = vapi_calls()
-    ic(len(calls))
+    print(f"Found {len(calls)} calls")
     total_cost = 0.0
     for call in calls:
         start = call.Start.strftime("%Y-%m-%d %H:%M")
-        ic(call.Caller, start, call.length_in_seconds(), len(call.Transcript), f"${call.Cost:.3f}")
+        print(f"Call: {call.Caller} at {start} ({call.length_in_seconds():.0f}s, {len(call.Transcript)} chars) ${call.Cost:.3f}")
         total_cost += call.Cost
         if costs:
             # Display cost breakdown components
             breakdown = call.CostBreakdown
             if breakdown:
-                ic("Cost Breakdown:")
-                ic(f"  Transport: ${breakdown.get('transport', 0):.3f}")
-                ic(f"  Speech-to-Text: ${breakdown.get('stt', 0):.3f}")
-                ic(f"  LLM: ${breakdown.get('llm', 0):.3f}")
-                ic(f"  Text-to-Speech: ${breakdown.get('tts', 0):.3f}")
-                ic(f"  VAPI: ${breakdown.get('vapi', 0):.3f}")
+                print("  Cost Breakdown:")
+                print(f"    Transport: ${breakdown.get('transport', 0):.3f}")
+                print(f"    Speech-to-Text: ${breakdown.get('stt', 0):.3f}")
+                print(f"    LLM: ${breakdown.get('llm', 0):.3f}")
+                print(f"    Text-to-Speech: ${breakdown.get('tts', 0):.3f}")
+                print(f"    VAPI: ${breakdown.get('vapi', 0):.3f}")
                 if 'analysisCostBreakdown' in breakdown:
                     analysis = breakdown['analysisCostBreakdown']
-                    ic("Analysis Costs:")
-                    ic(f"  Summary: ${analysis.get('summary', 0):.3f}")
-                    ic(f"  Structured Data: ${analysis.get('structuredData', 0):.3f}")
-                    ic(f"  Success Evaluation: ${analysis.get('successEvaluation', 0):.3f}")
-        ic(call.Summary)
+                    print("    Analysis Costs:")
+                    print(f"      Summary: ${analysis.get('summary', 0):.3f}")
+                    print(f"      Structured Data: ${analysis.get('structuredData', 0):.3f}")
+                    print(f"      Success Evaluation: ${analysis.get('successEvaluation', 0):.3f}")
+        print(f"  Summary: {call.Summary}")
+        print()
     
     if costs:
-        ic(f"Total cost: ${total_cost:.3f}")
+        print(f"\nTotal cost: ${total_cost:.3f}")
 
 
 @app.command()
