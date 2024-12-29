@@ -65,27 +65,41 @@ class Call(BaseModel):
 
 
 def parse_call(call) -> Call:
+    """Parse a VAPI call response into a Call model.
+    
+    Args:
+        call: Raw call data from VAPI API
+        
+    Returns:
+        Call: Parsed call data with standardized fields
+    """
+    # Get customer number, defaulting to empty string if not present
     customer = ""
-    if "customer" in call:
+    if "customer" in call and "number" in call["customer"]:
         customer = call["customer"]["number"]
-    # ic(call)
 
-    start = call.get("createdAt")
-    # there is no end in some failure conditions
-    end = call.get("endedAt", start)
-    start_dt = datetime.strptime(start, "%Y-%m-%dT%H:%M:%S.%fZ")
-    end_dt = datetime.strptime(end, "%Y-%m-%dT%H:%M:%S.%fZ")
-    summary = call.get("summary", "")
+    # Get timestamps, using created time as fallback for end time
+    created_at = call.get("createdAt")
+    ended_at = call.get("endedAt", created_at)
 
+    # Parse timestamps and convert to local timezone
+    start_dt = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%S.%fZ")
+    end_dt = datetime.strptime(ended_at, "%Y-%m-%dT%H:%M:%S.%fZ") 
+    
+    # Convert UTC to local timezone
     start_dt = start_dt.replace(tzinfo=tz.tzutc()).astimezone(tz.tzlocal())
     end_dt = end_dt.replace(tzinfo=tz.tzutc()).astimezone(tz.tzlocal())
 
+    # Get transcript and summary, defaulting to empty strings
+    transcript = call.get("artifact", {}).get("transcript", "")
+    summary = call.get("analysis", {}).get("summary", "")
+
     return Call(
         Caller=customer,
-        Transcript=call.get("transcript", ""),
+        Transcript=transcript,
         Start=start_dt,
         End=end_dt,
-        Summary=summary,
+        Summary=summary
     )
 
 
