@@ -54,7 +54,8 @@ class CallSummary(BaseModel):
 
 
 class Call(BaseModel):
-    Caller: str
+    id: str
+    Caller: str 
     Transcript: str
     Summary: str
     Start: datetime
@@ -101,6 +102,7 @@ def parse_call(call) -> Call:
         cost = cost.get("total", 0.0)
 
     return Call(
+        id=call["id"],
         Caller=customer,
         Transcript=transcript,
         Start=start_dt,
@@ -147,14 +149,28 @@ weather:
 
 
 @app.command()
-def calls():
+def calls(
+    costs: Annotated[bool, typer.Option(help="Show detailed cost breakdown")] = False
+):
     """List all recent VAPI calls with their details."""
     calls = vapi_calls()
     ic(len(calls))
+    total_cost = 0.0
     for call in calls:
         start = call.Start.strftime("%Y-%m-%d %H:%M")
         ic(call.Caller, start, call.length_in_seconds(), len(call.Transcript), f"${call.Cost:.3f}")
+        total_cost += call.Cost
+        if costs:
+            # Get raw cost data from original response
+            raw_costs = httpx.get(
+                f"https://api.vapi.ai/call/{call.id}/cost", 
+                headers={"authorization": f"{os.environ['VAPI_API_KEY']}"}
+            ).json()
+            ic(raw_costs)
         ic(call.Summary)
+    
+    if costs:
+        ic(f"Total cost: ${total_cost:.3f}")
 
 
 @app.command()
