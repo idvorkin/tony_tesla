@@ -59,6 +59,7 @@ class Call(BaseModel):
     Summary: str
     Start: datetime
     End: datetime
+    Cost: float = 0.0  # Add cost field with default
 
     def length_in_seconds(self):
         return (self.End - self.Start).total_seconds()
@@ -94,12 +95,16 @@ def parse_call(call) -> Call:
     transcript = call.get("artifact", {}).get("transcript", "")
     summary = call.get("analysis", {}).get("summary", "")
 
+    # Get cost, defaulting to 0
+    cost = call.get("cost", {}).get("total", 0.0)
+
     return Call(
         Caller=customer,
         Transcript=transcript,
         Start=start_dt,
         End=end_dt,
-        Summary=summary
+        Summary=summary,
+        Cost=cost
     )
 
 
@@ -146,7 +151,7 @@ def calls():
     ic(len(calls))
     for call in calls:
         start = call.Start.strftime("%Y-%m-%d %H:%M")
-        ic(call.Caller, start, call.length_in_seconds(), len(call.Transcript))
+        ic(call.Caller, start, call.length_in_seconds(), len(call.Transcript), f"${call.Cost:.3f}")
         ic(call.Summary)
 
 
