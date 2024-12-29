@@ -61,7 +61,8 @@ class Call(BaseModel):
     Summary: str
     Start: datetime
     End: datetime
-    Cost: float = 0.0  # Add cost field with default
+    Cost: float = 0.0
+    CostBreakdown: dict = {}  # Add costBreakdown field
 
     def length_in_seconds(self):
         return (self.End - self.Start).total_seconds()
@@ -102,6 +103,8 @@ def parse_call(call) -> Call:
     if isinstance(cost, dict):
         cost = cost.get("total", 0.0)
 
+    cost_breakdown = call.get("costBreakdown", {})
+
     return Call(
         id=call["id"],
         Caller=customer,
@@ -109,7 +112,8 @@ def parse_call(call) -> Call:
         Start=start_dt,
         End=end_dt,
         Summary=summary,
-        Cost=cost
+        Cost=cost,
+        CostBreakdown=cost_breakdown
     )
 
 
@@ -162,12 +166,21 @@ def calls(
         ic(call.Caller, start, call.length_in_seconds(), len(call.Transcript), f"${call.Cost:.3f}")
         total_cost += call.Cost
         if costs:
-            # Get raw cost data from original response
-            raw_costs = httpx.get(
-                f"https://api.vapi.ai/call/{call.id}/cost", 
-                headers={"authorization": f"{os.environ['VAPI_API_KEY']}"}
-            ).json()
-            ic(raw_costs)
+            # Display cost breakdown components
+            breakdown = call.CostBreakdown
+            if breakdown:
+                ic("Cost Breakdown:")
+                ic(f"  Transport: ${breakdown.get('transport', 0):.3f}")
+                ic(f"  Speech-to-Text: ${breakdown.get('stt', 0):.3f}")
+                ic(f"  LLM: ${breakdown.get('llm', 0):.3f}")
+                ic(f"  Text-to-Speech: ${breakdown.get('tts', 0):.3f}")
+                ic(f"  VAPI: ${breakdown.get('vapi', 0):.3f}")
+                if 'analysisCostBreakdown' in breakdown:
+                    analysis = breakdown['analysisCostBreakdown']
+                    ic("Analysis Costs:")
+                    ic(f"  Summary: ${analysis.get('summary', 0):.3f}")
+                    ic(f"  Structured Data: ${analysis.get('structuredData', 0):.3f}")
+                    ic(f"  Success Evaluation: ${analysis.get('successEvaluation', 0):.3f}")
         ic(call.Summary)
     
     if costs:
