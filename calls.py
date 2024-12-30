@@ -221,7 +221,9 @@ Transcript:
             return
             
         try:
-            call = self.calls[selected_row]
+            call_id = self.call_table.get_row_at(selected_row).key
+            call = next(c for c in self.calls if c.id == call_id)
+            
             transcript_text = f"""Transcript for call {call.id}:
 
 {call.Transcript}
