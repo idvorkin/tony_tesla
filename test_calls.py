@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from calls import CallBrowserApp, Call, HelpScreen, SortScreen
 from textual.widgets import DataTable, Static
 from textual.pilot import Pilot
+from icecream import ic
 
 # Mark all tests as async
 pytestmark = pytest.mark.asyncio
@@ -24,7 +25,7 @@ def sample_calls():
             CostBreakdown={}
         ),
         Call(
-            id="2", 
+            id="2",
             Caller="+0987654321",
             Transcript="Test transcript 2",
             Summary="Test summary 2",
@@ -46,18 +47,18 @@ async def test_app_initial_state(app):
     async with app.run_test() as pilot:
         # Check table exists and has correct columns
         table = app.query_one(DataTable)
-        
+
         # Add comprehensive widget debugging
         print("\nDEBUG: App widget tree:")
         print(app.query("*"))
-        
+
         print("\nDEBUG: DataTable properties:")
         print(f"Table exists: {table is not None}")
         print(f"Table class: {table.__class__.__name__}")
         print(f"Table id: {table.id}")
         print(f"Row count: {table.row_count}")
         print(f"Column count: {len(table.columns)}")
-        
+
         # Debug column information
         print("\nDEBUG: Column details:")
         for i, col in enumerate(table.columns):
@@ -66,17 +67,17 @@ async def test_app_initial_state(app):
             print(f"  Type: {type(col)}")
             print(f"  Dir: {dir(col)}")
             print(f"  Str repr: {str(col)}")
-        
+
         # Extract and verify columns
         columns = [col.value for col in table.columns.keys()]
         print("\nDEBUG: Extracted columns:", columns)
-        
+
         assert columns == ["Time", "Length", "Cost", "Summary"]
-        
+
         # Check initial details and transcript
         details = app.query_one("#details", Static)
         assert "Select a call to view details" in details.render()
-        
+
         transcript = app.query_one("#transcript", Static)
         assert "Select a call to view transcript" in transcript.render()
 
@@ -84,11 +85,11 @@ async def test_navigation(app):
     """Test basic navigation works."""
     async with app.run_test() as pilot:
         table = app.query_one(DataTable)
-        
+
         # Test moving down
         await pilot.press("j")
         assert table.cursor_row == 1
-        
+
         # Test moving up
         await pilot.press("k")
         assert table.cursor_row == 0
@@ -99,7 +100,7 @@ async def test_help_screen(app):
         # Open help screen
         await pilot.press("?")
         assert isinstance(app.screen, HelpScreen)
-        
+
         # Close help screen
         await pilot.press("escape")
         assert not isinstance(app.screen, HelpScreen)
@@ -114,7 +115,7 @@ async def test_sort_screen(app):
         print("DEBUG: Current screen:", app.screen)
         print("DEBUG: Screen type:", type(app.screen))
         assert isinstance(app.screen, SortScreen)
-        
+
         # Press escape to cancel
         await pilot.press("escape")
         assert not isinstance(app.screen, SortScreen)
@@ -125,20 +126,23 @@ async def test_call_selection(app):
         table = app.query_one(DataTable)
         details = app.query_one("#details", Static)
         transcript = app.query_one("#transcript", Static)
-        
+        ic(details)
+        ic(table)
+        ic(transcript)
+
         # Select the first row
         table.move_cursor(row=0)
         # Trigger the selection event explicitly
         await table.emit("select", DataTable.Selected(table.cursor_row, 0))
-        
+
         # Allow time for update
         await pilot.pause()
-        
+
         # Get the rendered text directly from the widget
         details_text = str(details.render()._renderable)
-            
+
         transcript_text = str(transcript.render()._renderable)
-        
+
         assert "Test summary 1" in details_text
         assert "Test transcript 1" in transcript_text
         assert "$1.50" in details_text
