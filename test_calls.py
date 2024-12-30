@@ -4,6 +4,17 @@ from calls import CallBrowserApp, Call, HelpScreen, SortScreen
 from textual.widgets import DataTable, Static
 from textual.pilot import Pilot
 
+# Mark all tests as async
+pytestmark = pytest.mark.asyncio
+
+@pytest.fixture(scope="function")
+def event_loop():
+    """Create an instance of the default event loop for each test case."""
+    import asyncio
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
 @pytest.fixture
 def sample_calls():
     """Create sample calls for testing."""
