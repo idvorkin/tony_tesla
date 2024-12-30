@@ -61,6 +61,62 @@ When creating TUI (Text User Interface) applications:
   ]
   ```
 - Include a Help screen modal that shows available commands
+- Use DataTable for tabular data display:
+  - When accessing DataTable columns, handle ColumnKey objects by stripping wrapper text:
+    ```python
+    columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
+              for col in table.columns.keys()]
+    ```
+  - Always include a key parameter when adding rows for selection tracking
+  - Implement row selection handlers with `on_data_table_row_selected`
+
+- For modal screens:
+  - Inherit from ModalScreen
+  - Include proper styling in on_mount:
+    ```python
+    def on_mount(self) -> None:
+        container = self.query_one(Container)
+        container.styles.align = ("center", "middle")
+        container.styles.height = "auto"
+        container.styles.width = "auto"
+        container.styles.background = "rgba(0,0,0,0.8)"
+        container.styles.padding = (2, 4)
+        container.styles.border = ("solid", "white")
+    ```
+  - Use Container for layout management
+  - Include proper error handling with loguru
+  - Follow this structure for the main app:
+    ```python
+    class MyTUIApp(App):
+        # Define bindings
+        # Define compose() for layout
+        # Define action methods for commands
+    
+    @app.command()
+    def browse():
+        """Browse data in an interactive TUI"""
+        app = MyTUIApp()
+        app.run()
+    
+    @logger.catch()
+    def app_wrap_loguru():
+        app()
+    ```
+
+### TUI Applications
+
+When creating TUI (Text User Interface) applications:
+- Use Textual library for TUI apps
+- Include standard key bindings:
+  ```python
+  BINDINGS = [
+      Binding("q", "quit", "Quit"),
+      Binding("j", "move_down", "Down"), 
+      Binding("k", "move_up", "Up"),
+      Binding("?", "help", "Help")
+  ]
+  ```
+- Include a Help screen modal that shows available commands
 - Use DataTable for tabular data display
 - Use Static widgets for text display areas
 - Use Container for layout management
