@@ -396,13 +396,22 @@ Transcript:
             response = httpx.get(f"https://api.vapi.ai/call/{call.id}", headers=headers)
             raw_call = response.json()
             
-            # Format and update JSON view with clear formatting
+            # Add debug logging
+            logger.info(f"Got raw call data: {len(str(raw_call))} bytes")
+            
+            # Format JSON with explicit formatting and make sure it's visible
             json_text = "Call Details (JSON):\n\n" + json.dumps(raw_call, indent=2, default=str)
             self.json_view.update(json_text)
-            logger.info(f"Updated JSON view for call {call.id}")
+            
+            # Force update styles to ensure visibility
+            self.json_view.styles.background = "black"
+            self.json_view.styles.color = "white"
+            self.json_view.styles.padding = (1, 2)
+            
+            logger.info("Updated JSON view")
         except Exception as e:
             logger.error(f"Error updating views: {e}")
-            self.json_view.update("Error loading call details")
+            self.json_view.update(f"Error loading call details: {str(e)}")
 
     def action_move_down(self):
         self.call_table.action_cursor_down()
