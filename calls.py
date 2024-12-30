@@ -77,33 +77,6 @@ def vapi_calls() -> List[Call]:
         for c in httpx.get("https://api.vapi.ai/call", headers=headers).json()
     ]
 
-class TranscriptScreen(ModalScreen):
-    """Modal screen showing the full transcript."""
-    
-    BINDINGS = [("escape,space,enter", "dismiss", "Close")]
-
-    def __init__(self, transcript_text: str):
-        super().__init__()
-        self.transcript_text = transcript_text
-
-    def compose(self) -> ComposeResult:
-        with Container(classes="transcript-overlay"):
-            yield Static(self.transcript_text, id="transcript-text")
-
-    def on_mount(self) -> None:
-        container = self.query_one(Container)
-        container.styles.align = ("center", "middle")
-        container.styles.height = "90%"
-        container.styles.width = "90%"
-        
-        self.styles.background = "rgba(0,0,0,0.5)"
-        container.styles.background = "rgba(0,0,0,0.8)"
-        container.styles.padding = (2, 4)
-        container.styles.border = ("solid", "white")
-        container.styles.overflow_y = "scroll"
-
-    def on_key(self, event):
-        self.dismiss()
 
 class HelpScreen(ModalScreen):
     """Help screen showing available commands."""
@@ -120,7 +93,6 @@ class HelpScreen(ModalScreen):
 ║  j - Move down             ║
 ║  k - Move up              ║
 ║  e - Edit JSON details    ║
-║  d - Show transcript      ║
 ║  q - Quit application     ║
 ║                            ║
 ║  Press any key to close    ║
@@ -149,7 +121,6 @@ class CallBrowserApp(App):
         Binding("k", "move_up", "Up"),
         Binding("?", "help", "Help"),
         Binding("e", "edit_json", "Edit JSON"),
-        Binding("d", "show_transcript", "Show Details"),
     ]
 
     def on_mount(self) -> None:
@@ -191,7 +162,7 @@ class CallBrowserApp(App):
                 yield self.details
 
             # Bottom transcript pane
-            self.transcript = Static("Press 'd' to view transcript", id="transcript")
+            self.transcript = Static("Select a call to view transcript", id="transcript")
             self.transcript.styles.height = "50vh"  # Take up half vertical height
             self.transcript.styles.border = ("solid", "white")
             self.transcript.styles.overflow_y = "scroll"
@@ -210,15 +181,23 @@ Caller: {call.Caller}
 
 Summary:
 {call.Summary}
-
-Transcript:
-{call.Transcript[:500]}...
 """
             self.details.update(details_text)
+            
+            # Update transcript pane
+            transcript_text = f"""Full Transcript for call {call.id}
+Time: {call.Start.strftime('%Y-%m-%d %H:%M')}
+Length: {call.length_in_seconds():.0f}s
+Cost: ${call.Cost:.2f}
+
+{call.Transcript}
+"""
+            self.transcript.update(transcript_text)
             
         except Exception as e:
             logger.error(f"Error updating views: {e}")
             self.details.update(f"Error loading call details: {str(e)}")
+            self.transcript.update(f"Error loading transcript: {str(e)}")
 
     def action_move_down(self):
         self.call_table.action_cursor_down()
@@ -230,34 +209,6 @@ Transcript:
         """Show help screen when ? is pressed."""
         self.push_screen(HelpScreen())
 
-    def action_show_transcript(self):
-        """Show full transcript in a modal when 'd' is pressed"""
-        logger.info("Show transcript action triggered")
-        selected_row = self.call_table.cursor_row
-        if selected_row is None:
-            return
-            
-        try:
-            # Get the call directly from self.calls using the selected row index
-            call = self.calls[selected_row]
-            
-            transcript_text = f"""Full Transcript for call {call.id}
-Time: {call.Start.strftime('%Y-%m-%d %H:%M')}
-Length: {call.length_in_seconds():.0f}s
-Cost: ${call.Cost:.2f}
-
-{call.Transcript}
-"""
-            # Update the bottom transcript pane
-            self.transcript.update(transcript_text)
-            
-            # Show the modal popup
-            self.push_screen(TranscriptScreen(transcript_text))
-        except Exception as e:
-            logger.error(f"Error showing transcript: {e}")
-            error_message = f"Error loading transcript: {str(e)}"
-            self.transcript.update(error_message)
-            self.push_screen(TranscriptScreen(error_message))
 
     def action_edit_json(self):
         """Open the current call's JSON in external editor"""
