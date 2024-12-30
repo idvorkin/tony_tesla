@@ -47,8 +47,7 @@ async def test_app_initial_state(app):
         # Check table exists and has correct columns
         table = app.query_one(DataTable)
         # Extract just the column names from the ColumnKey objects
-        columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
-                  for col in table.columns]
+        columns = [str(col.key) for col in table.columns.keys()]
         assert columns == ["Time", "Length", "Cost", "Summary"]
         
         # Check initial details and transcript
@@ -102,8 +101,9 @@ async def test_call_selection(app):
         
         # Click the table first
         await pilot.click("DataTable")
-        # Then simulate selecting the first row
-        table.cursor_row = 0
+        # Move cursor to first row using the proper method
+        await table.move_cursor(row=0)
+        # Select the row
         await table.action_select_cursor()
         
         # Verify details and transcript updated
