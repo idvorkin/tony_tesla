@@ -12,22 +12,34 @@ CACHE_DB = os.path.join(tempfile.gettempdir(), "vapi_calls.db")
 logger.debug(f"Cache database location: {CACHE_DB}")
 
 def init_db():
+    """Initialize the cache database with proper error handling"""
     logger.debug("Initializing cache database")
-    conn = sqlite3.connect(CACHE_DB)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS calls
-                 (id TEXT PRIMARY KEY, 
-                  caller TEXT,
-                  transcript TEXT,
-                  summary TEXT,
-                  start TEXT,
-                  end TEXT,
-                  cost REAL,
-                  cost_breakdown TEXT,
-                  cached_at TEXT)''')
-    conn.commit()
-    conn.close()
-    logger.debug("Cache database initialized")
+    try:
+        conn = sqlite3.connect(CACHE_DB)
+        c = conn.cursor()
+        
+        # Check if table exists
+        c.execute('''SELECT name FROM sqlite_master WHERE type='table' AND name='calls' ''')
+        if not c.fetchone():
+            c.execute('''CREATE TABLE calls
+                     (id TEXT PRIMARY KEY, 
+                      caller TEXT,
+                      transcript TEXT,
+                      summary TEXT,
+                      start TEXT,
+                      end TEXT,
+                      cost REAL,
+                      cost_breakdown TEXT,
+                      cached_at TEXT)''')
+            conn.commit()
+            logger.debug("Created calls table")
+        
+        conn.close()
+        logger.debug("Cache database initialized")
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error initializing database: {e}")
+        return False
 
 def get_latest_cached_call() -> Optional[Call]:
     """Get the most recent call from the cache based on Start time"""
@@ -67,27 +79,38 @@ def cache_calls(calls: List[Call], cache_time: Optional[datetime] = None):
     :param cache_time: Optional datetime to use as cache time (for testing)
     """
     logger.debug(f"Caching {len(calls)} calls")
-    conn = sqlite3.connect(CACHE_DB)
-    c = conn.cursor()
-    cache_time = cache_time or datetime.now()
-    logger.debug(f"Using cache timestamp: {cache_time.isoformat()}")
     
-    for call in calls:
-        c.execute('''INSERT OR REPLACE INTO calls VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                 (call.id,
-                  call.Caller,
-                  call.Transcript,
-                  call.Summary,
-                  call.Start.isoformat(),
-                  call.End.isoformat(),
-                  call.Cost,
-                  json.dumps(call.CostBreakdown),
-                  cache_time.isoformat()))
-        logger.debug(f"Cached call {call.id} from {call.Start}")
+    # Ensure database and table exist
+    if not init_db():
+        logger.error("Failed to initialize database")
+        return
     
-    conn.commit()
-    conn.close()
-    logger.debug("Cache operation completed")
+    try:
+        conn = sqlite3.connect(CACHE_DB)
+        c = conn.cursor()
+        cache_time = cache_time or datetime.now()
+        logger.debug(f"Using cache timestamp: {cache_time.isoformat()}")
+        
+        for call in calls:
+            c.execute('''INSERT OR REPLACE INTO calls VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                     (call.id,
+                      call.Caller,
+                      call.Transcript,
+                      call.Summary,
+                      call.Start.isoformat(),
+                      call.End.isoformat(),
+                      call.Cost,
+                      json.dumps(call.CostBreakdown),
+                      cache_time.isoformat()))
+            logger.debug(f"Cached call {call.id} from {call.Start}")
+        
+        conn.commit()
+        conn.close()
+        logger.debug("Cache operation completed")
+    except sqlite3.Error as e:
+        logger.error(f"Error caching calls: {e}")
+        if conn:
+            conn.close()
 
 def get_cached_calls(max_age_minutes: int = 1440) -> Optional[List[Call]]:
     """Get cached calls if they exist and are not older than max_age_minutes"""
@@ -135,41 +158,54 @@ def get_cached_calls(max_age_minutes: int = 1440) -> Optional[List[Call]]:
 
 def get_cache_stats() -> dict:
     """Get statistics about the cache"""
-    if not os.path.exists(CACHE_DB):
-        return {
-            "exists": False,
-            "size_bytes": 0,
-            "call_count": 0,
-            "oldest_call": None,
-            "newest_call": None
-        }
-        
-    conn = sqlite3.connect(CACHE_DB)
-    c = conn.cursor()
-    
-    # Get total number of calls
-    c.execute("SELECT COUNT(*) FROM calls")
-    call_count = c.fetchone()[0]
-    
-    # Get oldest and newest cached times
-    c.execute("SELECT MIN(cached_at), MAX(cached_at) FROM calls")
-    oldest, newest = c.fetchone()
-    
-    # Get database file size
-    size_bytes = os.path.getsize(CACHE_DB)
-    
-    conn.close()
-    
     stats = {
-        "exists": True,
-        "size_bytes": size_bytes,
-        "size_mb": round(size_bytes / (1024 * 1024), 2),
-        "call_count": call_count,
-        "oldest_call": oldest,
-        "newest_call": newest
+        "exists": False,
+        "size_bytes": 0,
+        "call_count": 0,
+        "oldest_call": None,
+        "newest_call": None,
+        "size_mb": 0
     }
     
-    logger.debug(f"Cache stats: {stats}")
+    if not os.path.exists(CACHE_DB):
+        return stats
+        
+    try:
+        conn = sqlite3.connect(CACHE_DB)
+        c = conn.cursor()
+        
+        # Check if table exists
+        c.execute('''SELECT name FROM sqlite_master WHERE type='table' AND name='calls' ''')
+        if not c.fetchone():
+            conn.close()
+            stats["exists"] = True  # File exists but table doesn't
+            return stats
+        
+        # Get total number of calls
+        c.execute("SELECT COUNT(*) FROM calls")
+        call_count = c.fetchone()[0]
+        
+        # Get oldest and newest cached times
+        c.execute("SELECT MIN(cached_at), MAX(cached_at) FROM calls")
+        oldest, newest = c.fetchone()
+        
+        # Get database file size
+        size_bytes = os.path.getsize(CACHE_DB)
+        
+        conn.close()
+        
+        stats.update({
+            "exists": True,
+            "size_bytes": size_bytes,
+            "size_mb": round(size_bytes / (1024 * 1024), 2),
+            "call_count": call_count,
+            "oldest_call": oldest,
+            "newest_call": newest
+        })
+        
+    except sqlite3.Error as e:
+        logger.error(f"Error getting cache stats: {e}")
+        
     return stats
 
 # Initialize the database when the module is imported

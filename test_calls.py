@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 from dateutil import tz
-from calls import parse_call, format_phone_number, Call, CallBrowserApp
+from calls import parse_call, format_phone_number, Call, CallBrowserApp, HelpScreen
 from textual.pilot import Pilot
 
 @pytest.fixture
@@ -216,3 +216,37 @@ async def test_transcript_scrolling(long_transcript_call):
         current_scroll_y = container.scroll_y
         await pilot.press("k")
         assert container.scroll_y < current_scroll_y
+
+@pytest.mark.asyncio
+async def test_help_screen_dismiss():
+    """Test that help screen dismisses on both escape and q, but q doesn't quit the app"""
+    app = CallBrowserApp()
+    
+    async with app.run_test() as pilot:
+        # Open help screen
+        await pilot.press("?")
+        await pilot.pause()
+        
+        # Verify help screen is shown
+        help_screen = app.query_one(HelpScreen)
+        assert help_screen is not None
+        
+        # Press 'q' - should dismiss help screen but not quit app
+        await pilot.press("q")
+        await pilot.pause()
+        
+        # Verify help screen is dismissed
+        help_screen = app.query(HelpScreen)
+        assert len(help_screen) == 0
+        
+        # Verify app is still running (can open help screen again)
+        await pilot.press("?")
+        await pilot.pause()
+        help_screen = app.query_one(HelpScreen)
+        assert help_screen is not None
+        
+        # Press escape - should also dismiss
+        await pilot.press("escape")
+        await pilot.pause()
+        help_screen = app.query(HelpScreen)
+        assert len(help_screen) == 0

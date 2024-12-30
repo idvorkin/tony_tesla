@@ -300,9 +300,6 @@ class HelpScreen(ModalScreen):
                 yield Label("s - Sort", classes="command")
                 yield Label("q - Quit", classes="command")
 
-    def on_key(self, event):
-        self.dismiss()
-
 class EditScreen(ModalScreen):
     """Screen for editing options."""
     

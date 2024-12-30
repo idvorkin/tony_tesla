@@ -36,14 +36,24 @@ def sample_calls():
 def setup_teardown():
     # Setup: ensure we're using a temporary test database
     old_cache_db = CACHE_DB
-    test_db = os.path.join(tempfile.gettempdir(), "test_vapi_calls.db")
+    test_db = os.path.join(tempfile.gettempdir(), f"test_vapi_calls_{os.getpid()}.db")
+    
+    # Patch the CACHE_DB path and initialize a fresh database
     with patch('cache.CACHE_DB', test_db):
+        # Remove any existing test database
+        if os.path.exists(test_db):
+            os.remove(test_db)
+        
+        # Initialize fresh database
         init_db()
         yield
     
     # Teardown: remove test database
     if os.path.exists(test_db):
-        os.remove(test_db)
+        try:
+            os.remove(test_db)
+        except PermissionError:
+            pass  # Ignore permission errors during cleanup
 
 def test_cache_and_retrieve_calls(sample_calls):
     # Cache the calls
