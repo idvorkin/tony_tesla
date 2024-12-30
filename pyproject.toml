@@ -40,13 +40,12 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = ["tony", "storage", "bus", "calls", "cache", "models"]
+py-modules = ["tony", "storage", "bus"]
 
 [project.scripts]
 storage = "storage:app"
 tony = "tony:app"
 bus = "bus:app"
-calls = "calls:app"
 
 [tool.pytest.ini_options]
 testpaths = ["test_*.py"]
