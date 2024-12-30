@@ -348,11 +348,12 @@ class CallBrowserApp(App):
             yield self.json_view
 
     def on_data_table_row_selected(self, event):
-        # Get selected call
-        call = next(c for c in self.calls if c.id == event.row_key.value)
-        
-        # Update details view
-        details_text = f"""
+        try:
+            # Get selected call
+            call = next(c for c in self.calls if c.id == event.row_key.value)
+            
+            # Update details view
+            details_text = f"""
 Start: {call.Start}
 End: {call.End}
 Length: {call.length_in_seconds():.0f}s
@@ -365,17 +366,22 @@ Summary:
 Transcript:
 {call.Transcript[:500]}...
 """
-        self.details.update(details_text)
+            self.details.update(details_text)
 
-        # Get the raw API response for this call
-        headers = {
-            "authorization": f"{os.environ['VAPI_API_KEY']}",
-        }
-        raw_call = httpx.get(f"https://api.vapi.ai/call/{call.id}", headers=headers).json()
-        
-        # Update JSON view with the full raw API response
-        json_text = json.dumps(raw_call, indent=2, default=str)
-        self.json_view.update(json_text)
+            # Get the raw API response for this call
+            headers = {
+                "authorization": f"{os.environ['VAPI_API_KEY']}",
+            }
+            response = httpx.get(f"https://api.vapi.ai/call/{call.id}", headers=headers)
+            raw_call = response.json()
+            
+            # Format and update JSON view
+            json_text = json.dumps(raw_call, indent=2, default=str)
+            self.json_view.update(json_text)
+            logger.info(f"Updated JSON view for call {call.id}")
+        except Exception as e:
+            logger.error(f"Error updating views: {e}")
+            self.json_view.update("Error loading call details")
 
     def action_move_down(self):
         self.call_table.action_cursor_down()
