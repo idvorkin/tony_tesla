@@ -434,8 +434,9 @@ Transcript:
                 logger.warning("No row selected")
                 return
                 
-            # Get call ID from selected row
-            call_id = self.call_table.get_row_at(selected_row).key
+            # Get the call directly from our calls list
+            call = self.calls[selected_row]
+            call_id = call.id
             
             # Get the raw API response for this call
             headers = {
