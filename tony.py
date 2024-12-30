@@ -428,13 +428,13 @@ Transcript:
 
     def action_edit_json(self):
         """Open the current call's JSON in external editor"""
+        # Get currently selected row
+        selected_row = self.call_table.cursor_row
+        if selected_row is None:
+            logger.warning("No row selected")
+            return
+            
         try:
-            # Get currently selected row
-            selected_row = self.call_table.cursor_row
-            if selected_row is None:
-                logger.warning("No row selected")
-                return
-                
             # Get the call directly from our calls list
             call = self.calls[selected_row]
             call_id = call.id
@@ -447,10 +447,8 @@ Transcript:
             raw_call = response.json()
             
             # Write to temp file
-            import tempfile
-            import os
-            
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+            with temp_file as f:
                 json.dump(raw_call, f, indent=2, default=str)
                 temp_path = f.name
                 
