@@ -40,3 +40,4 @@ py-modules = ["tony", "storage", "bus"]
 storage = "storage:app"
 tony = "tony:app"
 bus = "bus:app"
+calls = "calls:app"
