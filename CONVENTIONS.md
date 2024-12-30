@@ -139,6 +139,52 @@ When creating TUI (Text User Interface) applications:
       app()
   ```
 
+### Debugging
+
+When debugging, use the `ic` library:
+
+- Import ic at the top of files:
+  ```python
+  from icecream import ic
+  ```
+
+- Use ic() to debug variables and expressions:
+  ```python
+  # Basic variable inspection
+  ic(my_variable)
+  
+  # Multiple variables
+  ic(var1, var2, calculation_result)
+  
+  # Expressions
+  ic(table.columns, table.row_count)
+  
+  # Objects and their properties
+  ic(details.render()._renderable)
+  
+  # Before/after state changes
+  ic("Before action:", current_state)
+  action()
+  ic("After action:", new_state)
+  ```
+
+- For test debugging, combine ic with print statements for context:
+  ```python
+  print("\nDEBUG: Starting test")
+  ic(test_object)
+  
+  # Show test progress
+  print("\nDEBUG: After action")
+  ic(result)
+  ```
+
+- When debugging async code, mark important points:
+  ```python
+  ic("Before await")
+  await async_operation()
+  ic("After await")
+  ```
+
 ### Testing TUI Applications
 
 When testing Textual TUI applications:
