@@ -200,9 +200,12 @@ class CallBrowserApp(App):
             yield self.transcript
 
     def on_data_table_row_selected(self, event):
+        """Handle row selection in the data table."""
         try:
+            # Get the selected call using the row key
             call = next(c for c in self.calls if c.id == event.row_key.value)
-
+            
+            # Update details panel
             details_text = f"""
 Start: {call.Start}
 End: {call.End}

@@ -71,8 +71,7 @@ async def test_app_initial_state(app):
             print(f"Error with _value: {e}")
 
         # Extract column names with debug info
-        columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
-                  for col in table.columns.keys()]
+        columns = [col.value for col in table.columns.keys()]
         print("\nDEBUG: Final extracted columns:", columns)
         
         assert columns == ["Time", "Length", "Cost", "Summary"]
@@ -130,37 +129,15 @@ async def test_call_selection(app):
         details = app.query_one("#details", Static)
         transcript = app.query_one("#transcript", Static)
         
-        await pilot.click("DataTable")
+        # Select the first row
         table.move_cursor(row=0)
         table.action_select_cursor()
         
-        # Add extensive debugging for rendered content
-        print("\nDEBUG: Details widget info:")
-        print("Type of details:", type(details))
-        print("Dir of details:", dir(details))
+        # Allow time for update
+        await pilot.pause()
         
-        print("\nDEBUG: Render info:")
-        rendered = details.render()
-        print("Type of render result:", type(rendered))
-        print("Dir of render result:", dir(rendered))
-        print("Rendered content:", rendered)
-        
-        try:
-            print("\nDEBUG: Attempting different ways to get text:")
-            print("1. _renderable:", getattr(rendered, '_renderable', None))
-            print("2. plain:", getattr(rendered, 'plain', None))
-            print("3. text:", getattr(rendered, 'text', None))
-            print("4. str(render):", str(rendered))
-        except Exception as e:
-            print(f"Error getting text attributes: {e}")
-        
-        # Try to get text content with debug info
-        try:
-            details_text = str(details.render()._renderable)
-            print("\nDEBUG: Successfully got details_text:", details_text)
-        except Exception as e:
-            print(f"Error getting details text: {e}")
-            raise
+        # Get the rendered text directly from the widget
+        details_text = str(details.render()._renderable)
             
         transcript_text = str(transcript.render()._renderable)
         
