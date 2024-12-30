@@ -52,9 +52,8 @@ async def test_app_initial_state(app):
         print("DEBUG: First column key:", next(iter(table.columns.keys())))
         print("DEBUG: Dir of column key:", dir(next(iter(table.columns.keys()))))
         
-        # Try getting column names a different way
-        columns = [str(col).replace("ColumnKey('", "").replace("')", "") for col in table.columns.keys()]
-        print("DEBUG: Extracted columns:", columns)
+        # Get column values directly
+        columns = [col.value for col in table.columns.keys()]
         assert columns == ["Time", "Length", "Cost", "Summary"]
         
         # Check initial details and transcript
@@ -120,9 +119,9 @@ async def test_call_selection(app):
         rendered = details.render()
         print("DEBUG: Rendered content:", rendered)
         
-        # Try getting text content a different way
-        details_text = str(details.render())
-        transcript_text = str(transcript.render())
+        # Use .text to get the actual content
+        details_text = details.render().text
+        transcript_text = transcript.render().text
         
         assert "Test summary 1" in details_text
         assert "Test transcript 1" in transcript_text
