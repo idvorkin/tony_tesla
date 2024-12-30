@@ -271,40 +271,56 @@ def parse_calls(
     )
 
 
-from rich_cli_browser import Browser, Column
-from rich.text import Text
+from textual.app import App
+from textual.widgets import DataTable, Static
+from textual.containers import Horizontal
+from textual.binding import Binding
 
-class CallBrowser(Browser):
+class CallBrowserApp(App):
+    BINDINGS = [
+        Binding("q", "quit", "Quit"),
+        Binding("j", "move_down", "Down"),
+        Binding("k", "move_up", "Up"),
+    ]
+
     def __init__(self):
-        self.calls = vapi_calls()
         super().__init__()
+        self.calls = vapi_calls()
 
-    def get_columns(self) -> list[Column]:
-        # First column shows call list
-        call_list = Column("Calls")
-        for call in self.calls:
-            start = call.Start.strftime("%Y-%m-%d %H:%M")
-            length = f"{call.length_in_seconds():.0f}s"
-            text = Text(f"{start} ({length}) ${call.Cost:.2f}\n{call.Summary[:50]}...")
-            call_list.add_item(text, id=call.id)
-
-        # Second column shows selected call details
-        details = Column("Details") 
-        
-        # Third column shows full JSON
-        json_view = Column("JSON")
-
-        return [call_list, details, json_view]
-
-    def on_select(self, item_id: str, column_idx: int):
-        if column_idx == 0:  # Selected from first column
-            # Find selected call
-            call = next(c for c in self.calls if c.id == item_id)
+    def compose(self):
+        # Create three columns using Horizontal layout
+        with Horizontal():
+            # Left column: Call list
+            self.call_table = DataTable()
+            self.call_table.add_columns("Time", "Length", "Cost", "Summary")
             
-            # Update details column
-            details_col = self.columns[1]
-            details_col.clear()
-            details_col.add_item(Text(f"""
+            # Add calls to table
+            for call in self.calls:
+                start = call.Start.strftime("%Y-%m-%d %H:%M")
+                length = f"{call.length_in_seconds():.0f}s"
+                self.call_table.add_row(
+                    start,
+                    length,
+                    f"${call.Cost:.2f}",
+                    call.Summary[:50] + "...",
+                    key=call.id
+                )
+            yield self.call_table
+
+            # Middle column: Call details
+            self.details = Static("Select a call to view details")
+            yield self.details
+
+            # Right column: JSON view
+            self.json_view = Static("Select a call to view JSON")
+            yield self.json_view
+
+    def on_data_table_row_selected(self, event):
+        # Get selected call
+        call = next(c for c in self.calls if c.id == event.row_key.value)
+        
+        # Update details view
+        details_text = f"""
 Start: {call.Start}
 End: {call.End}
 Length: {call.length_in_seconds():.0f}s
@@ -316,18 +332,24 @@ Summary:
 
 Transcript:
 {call.Transcript[:500]}...
-"""))
+"""
+        self.details.update(details_text)
 
-            # Update JSON column
-            json_col = self.columns[2]
-            json_col.clear()
-            json_col.add_item(Text(json.dumps(call.model_dump(), indent=2, default=str)))
+        # Update JSON view
+        json_text = json.dumps(call.model_dump(), indent=2, default=str)
+        self.json_view.update(json_text)
+
+    def action_move_down(self):
+        self.call_table.action_cursor_down()
+
+    def action_move_up(self):
+        self.call_table.action_cursor_up()
 
 @app.command()
 def browse():
-    """Browse calls in an interactive file-browser style TUI"""
-    browser = CallBrowser()
-    browser.run()
+    """Browse calls in an interactive TUI"""
+    app = CallBrowserApp()
+    app.run()
 
 @app.command()
 def local_parse_config():

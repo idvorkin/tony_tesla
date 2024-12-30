@@ -27,7 +27,7 @@ dependencies = [
     "onebusaway", 
     "httpx",
     "modal",
-    "rich-cli-browser"
+    "textual"
 ]
 
 [project.optional-dependencies]
