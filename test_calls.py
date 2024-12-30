@@ -47,7 +47,7 @@ async def test_app_initial_state(app):
         # Check table exists and has correct columns
         table = app.query_one(DataTable)
         # Extract just the column names from the ColumnKey objects
-        columns = [str(col.key) for col in table.columns.keys()]
+        columns = [str(col) for col in table.columns.keys()]
         assert columns == ["Time", "Length", "Cost", "Summary"]
         
         # Check initial details and transcript
