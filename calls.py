@@ -92,6 +92,7 @@ class HelpScreen(ModalScreen):
 ║  j - Move down             ║
 ║  k - Move up              ║
 ║  e - Edit JSON details    ║
+║  Enter - Show transcript   ║
 ║  q - Quit application     ║
 ║                            ║
 ║  Press any key to close    ║
@@ -120,6 +121,7 @@ class CallBrowserApp(App):
         Binding("k", "move_up", "Up"),
         Binding("?", "help", "Help"),
         Binding("e", "edit_json", "Edit JSON"),
+        Binding("enter", "show_transcript", "Show Transcript"),
     ]
 
     def __init__(self):
@@ -128,38 +130,40 @@ class CallBrowserApp(App):
         logger.info(f"Loaded {len(self.calls)} calls")
 
     def compose(self):
-        with Horizontal(classes="main-container"):
-            self.call_table = DataTable(id="calls")
-            self.call_table.add_columns("Time", "Length", "Cost", "Summary")
-            self.call_table.styles.width = "33%"
-            
-            try:
-                for call in self.calls:
-                    start = call.Start.strftime("%Y-%m-%d %H:%M")
-                    length = f"{call.length_in_seconds():.0f}s"
-                    self.call_table.add_row(
-                        start,
-                        length,
-                        f"${call.Cost:.2f}",
-                        call.Summary[:50] + "..." if call.Summary else "No summary",
-                        key=call.id
-                    )
-                logger.info(f"Added {self.call_table.row_count} rows to table")
-            except Exception as e:
-                logger.error(f"Error adding calls to table: {e}")
-            yield self.call_table
+        """Change layout to horizontal split with transcript below"""
+        with Container():
+            with Horizontal(classes="top-container"):
+                self.call_table = DataTable(id="calls")
+                self.call_table.add_columns("Time", "Length", "Cost", "Summary")
+                self.call_table.styles.width = "50%"
+                
+                try:
+                    for call in self.calls:
+                        start = call.Start.strftime("%Y-%m-%d %H:%M")
+                        length = f"{call.length_in_seconds():.0f}s"
+                        self.call_table.add_row(
+                            start,
+                            length,
+                            f"${call.Cost:.2f}",
+                            call.Summary[:50] + "..." if call.Summary else "No summary",
+                            key=call.id
+                        )
+                    logger.info(f"Added {self.call_table.row_count} rows to table")
+                except Exception as e:
+                    logger.error(f"Error adding calls to table: {e}")
+                yield self.call_table
 
-            self.details = Static("Select a call to view details", id="details")
-            self.details.styles.width = "33%"
-            self.details.styles.border = ("solid", "white")
-            yield self.details
+                self.details = Static("Select a call to view details", id="details")
+                self.details.styles.width = "50%"
+                self.details.styles.border = ("solid", "white")
+                yield self.details
 
-            self.json_view = Static("Select a call to view JSON", id="json")
-            self.json_view.styles.width = "33%"
-            self.json_view.styles.border = ("solid", "white")
-            self.json_view.styles.overflow_y = "scroll"
-            self.json_view.styles.background = "black"
-            yield self.json_view
+            # Bottom transcript pane
+            self.transcript = Static("Press Enter to view transcript", id="transcript")
+            self.transcript.styles.height = "50vh"  # Take up half vertical height
+            self.transcript.styles.border = ("solid", "white")
+            self.transcript.styles.overflow_y = "scroll"
+            yield self.transcript
 
     def on_data_table_row_selected(self, event):
         try:
@@ -209,6 +213,22 @@ Transcript:
     def action_help(self):
         """Show help screen when ? is pressed."""
         self.push_screen(HelpScreen())
+
+    def action_show_transcript(self):
+        """Show full transcript when Enter is pressed"""
+        selected_row = self.call_table.cursor_row
+        if selected_row is None:
+            return
+            
+        try:
+            call = self.calls[selected_row]
+            transcript_text = f"""Transcript for call {call.id}:
+
+{call.Transcript}
+"""
+            self.transcript.update(transcript_text)
+        except Exception as e:
+            logger.error(f"Error showing transcript: {e}")
 
     def action_edit_json(self):
         """Open the current call's JSON in external editor"""
