@@ -12,7 +12,7 @@ from loguru import logger
 from pydantic import BaseModel
 from textual.app import App, ComposeResult
 from textual.widgets import DataTable, Static, Footer, Label, Button
-from textual.containers import Horizontal, Center, Container, Grid
+from textual.containers import Horizontal, Center, Container, Grid, ScrollableContainer
 from textual.binding import Binding
 from textual.screen import ModalScreen
 from icecream import ic
@@ -426,11 +426,48 @@ class CallBrowserApp(App):
         Binding("k,up", "move_up", "Up"),
         Binding("g,g", "move_top", "Top"),
         Binding("G", "move_bottom", "Bottom"),
+        Binding("tab", "focus_next", "Next Pane"),
+        Binding("shift+tab", "focus_previous", "Previous Pane"),
         Binding("?", "help", "Help"),
         Binding("e", "edit_json", "Edit JSON"),
         Binding("s", "sort", "Sort"),
         Binding("enter", "select_row", "Select"),
     ]
+
+    CSS = """
+    #transcript-container {
+        height: 50vh;
+        border: solid $background;
+        overflow-y: scroll;
+        scrollbar-size: 1 1;
+    }
+    
+    #transcript-container:focus-within {
+        border: double $accent;
+    }
+    
+    #transcript {
+        width: 100%;
+        padding: 1;
+    }
+    
+    #details {
+        border: solid $background;
+        overflow-y: scroll;
+    }
+    
+    #details:focus {
+        border: double $accent;
+    }
+    
+    #calls {
+        border: solid $background;
+    }
+    
+    #calls:focus {
+        border: double $accent;
+    }
+    """
 
     def on_mount(self) -> None:
         """Called when app is mounted"""
@@ -440,6 +477,8 @@ class CallBrowserApp(App):
             self.call_table.move_cursor(row=0)
             self.call_table.action_select_cursor()
             self._update_views_for_current_row()
+            # Set initial focus to call table
+            self.set_focus(self.call_table)
 
     def __init__(self):
         super().__init__()
@@ -458,11 +497,11 @@ class CallBrowserApp(App):
                 self.call_table.add_column("Cost")
                 self.call_table.styles.width = "50%"
                 self.call_table.cursor_type = "row"
+                self.call_table.can_focus = True
 
                 try:
                     for call in self.calls:
                         start = call.Start.strftime("%Y-%m-%d %H:%M")
-                        # Format length in MM:SS
                         length_seconds = call.length_in_seconds()
                         minutes = int(length_seconds // 60)
                         seconds = int(length_seconds % 60)
@@ -480,15 +519,14 @@ class CallBrowserApp(App):
 
                 self.details = Static("Select a call to view details", id="details")
                 self.details.styles.width = "50%"
-                self.details.styles.border = ("solid", "white")
+                self.details.can_focus = False  # Details pane is not focusable
                 yield self.details
 
             # Bottom transcript pane
-            self.transcript = Static("Select a call to view transcript", id="transcript")
-            self.transcript.styles.height = "50vh"  # Take up half vertical height
-            self.transcript.styles.border = ("solid", "white")
-            self.transcript.styles.overflow_y = "scroll"
-            yield self.transcript
+            with ScrollableContainer(id="transcript-container"):
+                self.transcript = Static("Select a call to view transcript", id="transcript")
+                self.transcript.can_focus = True
+                yield self.transcript
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the data table."""
@@ -506,18 +544,26 @@ class CallBrowserApp(App):
             self.call_table.action_select_cursor()
 
     def action_move_down(self):
-        """Move cursor down and update transcript"""
-        self.call_table.action_cursor_down()
-        if self.call_table.cursor_row is not None:
-            self.call_table.action_select_cursor()
-        self._update_views_for_current_row()
+        """Move down in the focused pane"""
+        if self.focused == self.call_table:
+            self.call_table.action_cursor_down()
+            if self.call_table.cursor_row is not None:
+                self.call_table.action_select_cursor()
+            self._update_views_for_current_row()
+        elif self.focused == self.transcript:
+            container = self.query_one("#transcript-container")
+            container.scroll_down()
 
     def action_move_up(self):
-        """Move cursor up and update transcript"""
-        self.call_table.action_cursor_up()
-        if self.call_table.cursor_row is not None:
-            self.call_table.action_select_cursor()
-        self._update_views_for_current_row()
+        """Move up in the focused pane"""
+        if self.focused == self.call_table:
+            self.call_table.action_cursor_up()
+            if self.call_table.cursor_row is not None:
+                self.call_table.action_select_cursor()
+            self._update_views_for_current_row()
+        elif self.focused == self.transcript:
+            container = self.query_one("#transcript-container")
+            container.scroll_up()
 
     def action_help(self):
         """Show help screen when ? is pressed."""
@@ -645,17 +691,40 @@ class CallBrowserApp(App):
             self.transcript.update(f"Error loading transcript: {str(e)}")
 
     def action_move_top(self):
-        """Move cursor to top of list"""
-        self.call_table.move_cursor(row=0)
-        self.call_table.action_select_cursor()
-        self._update_views_for_current_row()
+        """Move to top of the focused pane"""
+        if self.focused == self.call_table:
+            self.call_table.move_cursor(row=0)
+            self.call_table.action_select_cursor()
+            self._update_views_for_current_row()
+        elif self.focused == self.transcript:
+            container = self.query_one("#transcript-container")
+            container.scroll_home()
 
     def action_move_bottom(self):
-        """Move cursor to bottom of list"""
-        last_row = len(self.calls) - 1
-        self.call_table.move_cursor(row=last_row)
-        self.call_table.action_select_cursor()
-        self._update_views_for_current_row()
+        """Move to bottom of the focused pane"""
+        if self.focused == self.call_table:
+            last_row = len(self.calls) - 1
+            self.call_table.move_cursor(row=last_row)
+            self.call_table.action_select_cursor()
+            self._update_views_for_current_row()
+        elif self.focused == self.transcript:
+            container = self.query_one("#transcript-container")
+            container.scroll_end()
+            container.scroll_end()
+
+    def action_focus_next(self):
+        """Handle tab key to move focus between panes"""
+        if self.focused == self.call_table:
+            self.set_focus(self.transcript)
+        else:
+            self.set_focus(self.call_table)
+
+    def action_focus_previous(self):
+        """Handle shift+tab to move focus between panes in reverse"""
+        if self.focused == self.call_table:
+            self.set_focus(self.transcript)
+        else:
+            self.set_focus(self.call_table)
 
 @app.command()
 def browse():

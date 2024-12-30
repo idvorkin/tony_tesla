@@ -1,7 +1,44 @@
 import pytest
 from datetime import datetime
 from dateutil import tz
-from calls import parse_call, format_phone_number, Call
+from calls import parse_call, format_phone_number, Call, CallBrowserApp
+from textual.pilot import Pilot
+
+@pytest.fixture
+def sample_call():
+    """Create a sample call for testing"""
+    return Call(
+        id="test-id",
+        Caller="1234567890",
+        Transcript="Tony: Hello\nIgor: Hi",
+        Summary="Test summary",
+        Start=datetime(2024, 1, 15, 14, 30, tzinfo=tz.tzutc()),
+        End=datetime(2024, 1, 15, 14, 35, tzinfo=tz.tzutc()),
+        Cost=1.23,
+        CostBreakdown={"transcription": 0.5, "analysis": 0.73}
+    )
+
+@pytest.fixture
+def long_transcript_call():
+    """Create a sample call with a long transcript for testing scrolling"""
+    # Create a transcript that's definitely longer than the viewport
+    lines = []
+    for i in range(100):
+        if i % 2 == 0:
+            lines.append(f"Tony: Line {i}")
+        else:
+            lines.append(f"Igor: Line {i}")
+    
+    return Call(
+        id="test-id",
+        Caller="1234567890",
+        Transcript="\n".join(lines),
+        Summary="Test summary",
+        Start=datetime(2024, 1, 15, 14, 30, tzinfo=tz.tzutc()),
+        End=datetime(2024, 1, 15, 14, 35, tzinfo=tz.tzutc()),
+        Cost=1.23,
+        CostBreakdown={"transcription": 0.5, "analysis": 0.73}
+    )
 
 def test_format_phone_number():
     """Test phone number formatting"""
@@ -41,6 +78,73 @@ def test_parse_call():
     length = call.length_in_seconds()
     assert length == 300.0  # 5 minutes = 300 seconds
 
+@pytest.mark.asyncio
+async def test_pane_navigation(sample_call):
+    """Test navigation between panes"""
+    app = CallBrowserApp()
+    app.calls = [sample_call]  # Use sample call for testing
+    
+    async with app.run_test() as pilot:
+        # Test initial focus
+        assert app.focused == app.call_table
+        
+        # Test tab navigation
+        await pilot.press("tab")
+        assert app.focused == app.transcript
+        await pilot.press("tab")
+        assert app.focused == app.call_table
+        
+        # Test reverse tab navigation
+        await pilot.press("shift+tab")
+        assert app.focused == app.transcript
+        await pilot.press("shift+tab")
+        assert app.focused == app.call_table
+
+@pytest.mark.asyncio
+async def test_pane_scrolling(sample_call):
+    """Test scrolling behavior in different panes"""
+    app = CallBrowserApp()
+    app.calls = [sample_call]
+    
+    async with app.run_test() as pilot:
+        # Test call table navigation
+        await pilot.press("j")  # Move down
+        assert app.call_table.cursor_row == 0  # Only one row
+        await pilot.press("k")  # Move up
+        assert app.call_table.cursor_row == 0
+        
+        # Test transcript scrolling
+        await pilot.press("tab")  # Focus transcript directly
+        assert app.focused == app.transcript
+        
+        # Test scroll commands
+        await pilot.press("g")  # Top
+        await pilot.press("g")
+        await pilot.press("G")  # Bottom
+        await pilot.press("j")  # Down
+        await pilot.press("k")  # Up
+
+@pytest.mark.asyncio
+async def test_focus_indicators(sample_call):
+    """Test that focus is visually indicated"""
+    app = CallBrowserApp()
+    app.calls = [sample_call]
+    
+    async with app.run_test() as pilot:
+        # Check initial focus border
+        call_table = app.query_one("#calls")
+        assert call_table.styles.border_top[0] == "double"
+        
+        # Check focus change updates borders
+        await pilot.press("tab")
+        transcript_container = app.query_one("#transcript-container")
+        assert transcript_container.styles.border_top[0] == "double"
+        assert call_table.styles.border_top[0] == "solid"
+        
+        # Verify details pane never gets focus border
+        details = app.query_one("#details")
+        assert not details.can_focus
+
 def test_parse_call_missing_fields():
     """Test parsing a call with missing optional fields"""
     minimal_call = {
@@ -72,3 +176,43 @@ def test_parse_call_cost_formats():
     # Test missing cost
     call_no_cost = parse_call({"id": "test", "createdAt": "2024-01-15T14:30:00.000Z"})
     assert call_no_cost.Cost == 0.0
+
+@pytest.mark.asyncio
+async def test_transcript_scrolling(long_transcript_call):
+    """Test scrolling behavior in transcript pane"""
+    app = CallBrowserApp()
+    app.calls = [long_transcript_call]
+    
+    async with app.run_test() as pilot:
+        # Focus the transcript pane directly
+        await pilot.press("tab")
+        container = app.query_one("#transcript-container")
+        assert app.focused == app.transcript
+        
+        # Get initial scroll position
+        initial_scroll_y = container.scroll_y
+        
+        # Scroll down multiple times
+        for _ in range(5):
+            await pilot.press("j")
+        assert container.scroll_y > initial_scroll_y
+        
+        # Scroll up
+        current_scroll_y = container.scroll_y
+        for _ in range(3):
+            await pilot.press("k")
+        assert container.scroll_y < current_scroll_y
+        
+        # Test gg (top)
+        await pilot.press("g")
+        await pilot.press("g")
+        assert container.scroll_y == 0
+        
+        # Test G (bottom)
+        await pilot.press("G")
+        assert container.scroll_y > 0  # Should be scrolled down
+        
+        # Verify we can scroll up from bottom
+        current_scroll_y = container.scroll_y
+        await pilot.press("k")
+        assert container.scroll_y < current_scroll_y
