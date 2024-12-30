@@ -282,11 +282,23 @@ Cost: ${call.Cost:.2f}
     def action_sort(self):
         """Show sort column selection screen"""
         async def show_sort_screen() -> None:
-            # Extract column names by converting to string and stripping wrapper
-            columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
-                      for col in self.call_table.columns.keys()]
+            print("\nDEBUG: Starting sort screen")
+            print("Column keys:", self.call_table.columns.keys())
+            
+            try:
+                # Extract column names with debug info
+                columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
+                          for col in self.call_table.columns.keys()]
+                print("DEBUG: Extracted columns:", columns)
+            except Exception as e:
+                print(f"Error extracting columns: {e}")
+                raise
+                
             screen = SortScreen(columns)
+            print("DEBUG: Created sort screen")
+            
             column_index = await self.push_screen_wait(screen)
+            print(f"DEBUG: Selected column index: {column_index}")
             
             if column_index is not None:  # None means user cancelled
                 # Sort the calls based on the selected column
