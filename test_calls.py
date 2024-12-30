@@ -47,7 +47,7 @@ async def test_app_initial_state(app):
         # Check table exists and has correct columns
         table = app.query_one(DataTable)
         # Extract just the column names from the ColumnKey objects
-        columns = [str(col) for col in table.columns.keys()]
+        columns = [str(col).replace("ColumnKey('", "").replace("')", "") for col in table.columns.keys()]
         assert columns == ["Time", "Length", "Cost", "Summary"]
         
         # Check initial details and transcript
@@ -99,14 +99,12 @@ async def test_call_selection(app):
         details = app.query_one("#details", Static)
         transcript = app.query_one("#transcript", Static)
         
-        # Click the table first
+        # Click the table first to focus it
         await pilot.click("DataTable")
-        # Click the table first
-        await pilot.click("DataTable")
-        # Move cursor to first row using the proper method
-        await table.move_cursor(row=0)
-        # Select the row
-        await table.action_select_cursor()
+        
+        # Move cursor and select using non-async methods
+        table.move_cursor(row=0)
+        table.action_select_cursor()
         
         # Verify details and transcript updated
         details_text = details.render()
