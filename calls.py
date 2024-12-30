@@ -237,8 +237,10 @@ Transcript:
             else:  # Unix
                 os.system(f'fx {temp_path}')
             
-            # Add refresh after returning from editor
+            # Refresh all panes by re-selecting the current row
             self.refresh()
+            if selected_row is not None:
+                self.call_table.select_row(selected_row)
             
         except Exception as e:
             logger.error(f"Error opening JSON: {e}")
