@@ -286,33 +286,41 @@ class CallBrowserApp(App):
     def __init__(self):
         super().__init__()
         self.calls = vapi_calls()
+        logger.info(f"Loaded {len(self.calls)} calls")
 
     def compose(self):
         # Create three columns using Horizontal layout
         with Horizontal():
-            # Left column: Call list
-            self.call_table = DataTable()
+            # Left column: Call list with explicit sizing
+            self.call_table = DataTable(id="calls")
             self.call_table.add_columns("Time", "Length", "Cost", "Summary")
+            self.call_table.styles.width = "30%"
             
-            # Add calls to table
-            for call in self.calls:
-                start = call.Start.strftime("%Y-%m-%d %H:%M")
-                length = f"{call.length_in_seconds():.0f}s"
-                self.call_table.add_row(
-                    start,
-                    length,
-                    f"${call.Cost:.2f}",
-                    call.Summary[:50] + "...",
-                    key=call.id
-                )
+            # Add calls to table with error handling
+            try:
+                for call in self.calls:
+                    start = call.Start.strftime("%Y-%m-%d %H:%M")
+                    length = f"{call.length_in_seconds():.0f}s"
+                    self.call_table.add_row(
+                        start,
+                        length,
+                        f"${call.Cost:.2f}",
+                        call.Summary[:50] + "..." if call.Summary else "No summary",
+                        key=call.id
+                    )
+                logger.info(f"Added {self.call_table.row_count} rows to table")
+            except Exception as e:
+                logger.error(f"Error adding calls to table: {e}")
             yield self.call_table
 
-            # Middle column: Call details
-            self.details = Static("Select a call to view details")
+            # Middle column: Call details with explicit sizing
+            self.details = Static("Select a call to view details", id="details")
+            self.details.styles.width = "35%"
             yield self.details
 
-            # Right column: JSON view
-            self.json_view = Static("Select a call to view JSON")
+            # Right column: JSON view with explicit sizing
+            self.json_view = Static("Select a call to view JSON", id="json")
+            self.json_view.styles.width = "35%"
             yield self.json_view
 
     def on_data_table_row_selected(self, event):
