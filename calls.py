@@ -231,15 +231,15 @@ Transcript:
         self.push_screen(HelpScreen())
 
     def action_show_transcript(self):
-        """Show full transcript in a modal when Enter is pressed"""
+        """Show full transcript in a modal when 'd' is pressed"""
         logger.info("Show transcript action triggered")
         selected_row = self.call_table.cursor_row
         if selected_row is None:
             return
             
         try:
-            call_id = self.call_table.get_row_at(selected_row).key
-            call = next(c for c in self.calls if c.id == call_id)
+            # Get the call directly from self.calls using the selected row index
+            call = self.calls[selected_row]
             
             transcript_text = f"""Full Transcript for call {call.id}
 Time: {call.Start.strftime('%Y-%m-%d %H:%M')}
