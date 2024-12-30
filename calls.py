@@ -11,8 +11,8 @@ import typer
 from loguru import logger
 from pydantic import BaseModel
 from textual.app import App, ComposeResult
-from textual.widgets import DataTable, Static, Footer, Label
-from textual.containers import Horizontal, Center, Container
+from textual.widgets import DataTable, Static, Footer, Label, Button
+from textual.containers import Horizontal, Center, Container, Grid
 from textual.binding import Binding
 from textual.screen import ModalScreen
 from icecream import ic
@@ -79,67 +79,176 @@ def vapi_calls() -> List[Call]:
 
 
 class SortScreen(ModalScreen):
-    """Sort selection screen"""
+    """Screen for sorting options."""
+    
+    BINDINGS = [
+        ("escape", "dismiss", "Close"),
+        ("t", "sort('time')", "Sort by Time"),
+        ("l", "sort('length')", "Sort by Length"),
+        ("c", "sort('cost')", "Sort by Cost"),
+        ("s", "sort('summary')", "Sort by Summary"),
+        ("r", "toggle_reverse", "Toggle Reverse Sort"),
+    ]
 
-    def __init__(self, columns):
+    CSS = """
+    Screen {
+        align: center middle;
+    }
+
+    #sort-container {
+        width: 60;
+        height: auto;
+        background: $boost;
+        border: tall $background;
+        padding: 1;
+    }
+
+    #sort-grid {
+        layout: grid;
+        grid-size: 2 2;
+        grid-gutter: 1 2;
+        padding: 1;
+        content-align: center middle;
+    }
+    
+    Button {
+        width: 100%;
+    }
+
+    Label {
+        content-align: center middle;
+        width: 100%;
+        padding: 1;
+    }
+
+    #sort-label {
+        color: $secondary;
+        text-style: bold;
+    }
+
+    #reverse-label {
+        color: $text;
+    }
+
+    #reverse-status {
+        color: $warning;
+        text-style: bold;
+    }
+    """
+    
+    def __init__(self):
         super().__init__()
-        self.columns = columns
+        self.reverse_sort = False
 
     def compose(self) -> ComposeResult:
-        with Container(classes="sort-overlay"):
-            yield Static("Select column to sort by:")
-            for i, col in enumerate(self.columns, 1):
-                yield Static(f"{i}. {col}")
-            yield Static("\nPress 1-{} to sort, or ESC to cancel".format(len(self.columns)))
+        with Container(id="sort-container"):
+            yield Label("Sort by:", id="sort-label")
+            with Grid(id="sort-grid"):
+                yield Button("[T]ime", id="time", variant="primary")
+                yield Button("[L]ength", id="length")
+                yield Button("[C]ost", id="cost")
+                yield Button("[S]ummary", id="summary")
+            yield Label("Press 'R' to toggle reverse sort", id="reverse-label")
+            yield Label("Reverse sort: OFF", id="reverse-status")
+
+    def action_toggle_reverse(self):
+        """Toggle reverse sort order."""
+        self.reverse_sort = not self.reverse_sort
+        status_label = self.query_one("#reverse-status", Label)
+        status_label.update(f"Reverse sort: {'ON' if self.reverse_sort else 'OFF'}")
+
+    def action_sort(self, column: str):
+        """Handle sort action for a column."""
+        # Get the parent app
+        app = self.app
+        if isinstance(app, CallBrowserApp):
+            # Sort the calls
+            reverse = self.reverse_sort
+            if column == "time":
+                app.calls.sort(key=lambda x: x.Start, reverse=reverse)
+            elif column == "length":
+                app.calls.sort(key=lambda x: x.length_in_seconds(), reverse=reverse)
+            elif column == "cost":
+                app.calls.sort(key=lambda x: x.Cost, reverse=reverse)
+            else:  # summary
+                app.calls.sort(key=lambda x: x.Summary or "", reverse=reverse)
+            
+            # Refresh the table
+            app.call_table.clear()
+            for call in app.calls:
+                start = call.Start.strftime("%Y-%m-%d %H:%M")
+                length = f"{call.length_in_seconds():.0f}s"
+                app.call_table.add_row(
+                    start,
+                    length,
+                    f"${call.Cost:.2f}",
+                    call.Summary[:50] + "..." if call.Summary else "No summary",
+                    key=call.id
+                )
+        
+        # Reset reverse sort status
+        self.reverse_sort = False
+        status_label = self.query_one("#reverse-status", Label)
+        status_label.update("Reverse sort: OFF")
+        
+        # Dismiss the modal
+        self.dismiss()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press."""
+        button_id = event.button.id
+        if button_id in ["time", "length", "cost", "summary"]:
+            self.action_sort(button_id)
 
     def on_mount(self) -> None:
-        container = self.query_one(Container)
-        container.styles.align = ("center", "middle")
-        container.styles.height = "auto"
-        container.styles.width = "auto"
-        container.styles.background = "rgba(0,0,0,0.8)"
-        container.styles.padding = (2, 4)
-        container.styles.border = ("solid", "white")
-
-    def on_key(self, event):
-        if event.key == "escape":
-            self.dismiss(None)
-        elif event.key in [str(i) for i in range(1, len(self.columns) + 1)]:
-            self.dismiss(int(event.key) - 1)
+        """Reset state when screen is mounted."""
+        self.reverse_sort = False
+        status_label = self.query_one("#reverse-status", Label)
+        status_label.update("Reverse sort: OFF")
 
 class HelpScreen(ModalScreen):
     """Help screen showing available commands."""
 
-    BINDINGS = [("escape,space,question_mark", "dismiss", "Close")]
+    BINDINGS = [("escape,q", "dismiss", "Close")]
+
+    CSS = """
+    Screen {
+        align: center middle;
+    }
+
+    #help-container {
+        width: 35;
+        background: $boost;
+        border: tall $background;
+        padding: 1;
+    }
+
+    #help-title {
+        text-align: center;
+        padding-bottom: 1;
+        color: $text;
+    }
+
+    #help-content {
+        padding: 1;
+    }
+
+    .command {
+        text-align: left;
+        padding-left: 2;
+    }
+    """
 
     def compose(self) -> ComposeResult:
-        with Container(classes="help-overlay"):
-            yield Static(
-                """╔════════════════════════════╗
-║      Available Commands     ║
-║                            ║
-║  ? - Show this help        ║
-║  j - Move down             ║
-║  k - Move up              ║
-║  e - Edit JSON details    ║
-║  s - Sort by column       ║
-║  q - Quit application     ║
-║                            ║
-║  Press any key to close    ║
-╚════════════════════════════╝""",
-                id="help-text"
-            )
-
-    def on_mount(self) -> None:
-        container = self.query_one(Container)
-        container.styles.align = ("center", "middle")
-        container.styles.height = "100%"
-        container.styles.width = "100%"
-
-        self.styles.background = "rgba(0,0,0,0.5)"
-        container.styles.background = "rgba(0,0,0,0.8)"
-        container.styles.padding = (2, 4)
-        container.styles.border = ("solid", "white")
+        with Container(id="help-container"):
+            yield Label("Available Commands", id="help-title")
+            with Container(id="help-content"):
+                yield Label("? - Show help", classes="command")
+                yield Label("j - Move down", classes="command")
+                yield Label("k - Move up", classes="command")
+                yield Label("e - Edit JSON", classes="command")
+                yield Label("s - Sort", classes="command")
+                yield Label("q - Quit", classes="command")
 
     def on_key(self, event):
         self.dismiss()
@@ -147,11 +256,12 @@ class HelpScreen(ModalScreen):
 class CallBrowserApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
-        Binding("j", "move_down", "Down"),
-        Binding("k", "move_up", "Up"),
+        Binding("j,down", "move_down", "Down"),
+        Binding("k,up", "move_up", "Up"),
         Binding("?", "help", "Help"),
         Binding("e", "edit_json", "Edit JSON"),
         Binding("s", "sort", "Sort"),
+        Binding("enter", "select_row", "Select"),
     ]
 
     def on_mount(self) -> None:
@@ -168,8 +278,13 @@ class CallBrowserApp(App):
         with Container():
             with Horizontal(classes="top-container"):
                 self.call_table = DataTable(id="calls")
-                self.call_table.add_columns("Time", "Length", "Cost", "Summary")
+                # Add columns with proper string labels
+                self.call_table.add_column("Time")
+                self.call_table.add_column("Length")
+                self.call_table.add_column("Cost")
+                self.call_table.add_column("Summary")
                 self.call_table.styles.width = "50%"
+                self.call_table.cursor_type = "row"
 
                 try:
                     for call in self.calls:
@@ -199,49 +314,12 @@ class CallBrowserApp(App):
             self.transcript.styles.overflow_y = "scroll"
             yield self.transcript
 
-    def on_data_table_row_selected(self, event):
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the data table."""
-        try:
-            # Get the selected call using the row key
-            call = next(c for c in self.calls if c.id == event.row_key.value)
-            
-            # Update details panel
-            details_text = f"""
-Start: {call.Start}
-End: {call.End}
-Length: {call.length_in_seconds():.0f}s
-Cost: ${call.Cost:.2f}
-Caller: {call.Caller}
-
-Summary:
-{call.Summary}
-"""
-            self.details.update(details_text)
-
-            # Update transcript pane
-            transcript_text = f"""Full Transcript for call {call.id}
-Time: {call.Start.strftime('%Y-%m-%d %H:%M')}
-Length: {call.length_in_seconds():.0f}s
-Cost: ${call.Cost:.2f}
-
-{call.Transcript}
-"""
-            self.transcript.update(transcript_text)
-
-        except Exception as e:
-            logger.error(f"Error updating views: {e}")
-            self.details.update(f"Error loading call details: {str(e)}")
-            self.transcript.update(f"Error loading transcript: {str(e)}")
-
-    def _update_views_for_current_row(self):
-        """Update both details and transcript for current row"""
-        selected_row = self.call_table.cursor_row
-        if selected_row is None:
-            return
-            
-        try:
-            call = self.calls[selected_row]
-            
+        ic("Row selected event:", event)
+        ic("Current cursor row:", self.call_table.cursor_row)
+        if self.call_table.cursor_row is not None:
+            call = self.calls[self.call_table.cursor_row]
             details_text = f"""
 Start: {call.Start}
 End: {call.End}
@@ -254,28 +332,30 @@ Summary:
 """
             self.details.update(details_text)
             
-            transcript_text = f"""Full Transcript for call {call.id}
-Time: {call.Start.strftime('%Y-%m-%d %H:%M')}
-Length: {call.length_in_seconds():.0f}s
-Cost: ${call.Cost:.2f}
-
+            transcript_text = f"""Full Transcript:
 {call.Transcript}
 """
             self.transcript.update(transcript_text)
-            
-        except Exception as e:
-            logger.error(f"Error updating views: {e}")
-            self.details.update(f"Error loading call details: {str(e)}")
-            self.transcript.update(f"Error loading transcript: {str(e)}")
+
+    def action_select_row(self):
+        """Handle enter key press to select row"""
+        ic("Select row action triggered")
+        ic("Current cursor row:", self.call_table.cursor_row)
+        if self.call_table.cursor_row is not None:
+            self.call_table.action_select_cursor()
 
     def action_move_down(self):
         """Move cursor down and update transcript"""
         self.call_table.action_cursor_down()
+        if self.call_table.cursor_row is not None:
+            self.call_table.action_select_cursor()
         self._update_views_for_current_row()
 
     def action_move_up(self):
         """Move cursor up and update transcript"""
         self.call_table.action_cursor_up()
+        if self.call_table.cursor_row is not None:
+            self.call_table.action_select_cursor()
         self._update_views_for_current_row()
 
     def action_help(self):
@@ -297,7 +377,7 @@ Cost: ${call.Cost:.2f}
                 print(f"Error extracting columns: {e}")
                 raise
                 
-            screen = SortScreen(columns)
+            screen = SortScreen()
             print("DEBUG: Created sort screen")
             
             column_index = await self.push_screen_wait(screen)
@@ -367,6 +447,42 @@ Cost: ${call.Cost:.2f}
 
         except Exception as e:
             logger.error(f"Error opening JSON: {e}")
+
+    def _update_views_for_current_row(self):
+        """Update both details and transcript for current row"""
+        selected_row = self.call_table.cursor_row
+        ic("Updating views for row:", selected_row)
+        
+        if selected_row is None:
+            ic("No row selected")
+            return
+            
+        try:
+            call = self.calls[selected_row]
+            ic("Found call:", call.id)
+            
+            details_text = f"""
+Start: {call.Start}
+End: {call.End}
+Length: {call.length_in_seconds():.0f}s
+Cost: ${call.Cost:.2f}
+Caller: {call.Caller}
+
+Summary:
+{call.Summary}
+"""
+            self.details.update(details_text)
+            
+            transcript_text = f"""Full Transcript:
+{call.Transcript}
+"""
+            self.transcript.update(transcript_text)
+            
+        except Exception as e:
+            logger.error(f"Error updating views: {e}")
+            ic("Error updating views:", str(e))
+            self.details.update(f"Error loading call details: {str(e)}")
+            self.transcript.update(f"Error loading transcript: {str(e)}")
 
 @app.command()
 def browse():
