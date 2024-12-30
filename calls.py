@@ -77,6 +77,34 @@ def vapi_calls() -> List[Call]:
         for c in httpx.get("https://api.vapi.ai/call", headers=headers).json()
     ]
 
+class TranscriptScreen(ModalScreen):
+    """Modal screen showing the full transcript."""
+    
+    BINDINGS = [("escape,space,enter", "dismiss", "Close")]
+
+    def __init__(self, transcript_text: str):
+        super().__init__()
+        self.transcript_text = transcript_text
+
+    def compose(self) -> ComposeResult:
+        with Container(classes="transcript-overlay"):
+            yield Static(self.transcript_text, id="transcript-text")
+
+    def on_mount(self) -> None:
+        container = self.query_one(Container)
+        container.styles.align = ("center", "middle")
+        container.styles.height = "90%"
+        container.styles.width = "90%"
+        
+        self.styles.background = "rgba(0,0,0,0.5)"
+        container.styles.background = "rgba(0,0,0,0.8)"
+        container.styles.padding = (2, 4)
+        container.styles.border = ("solid", "white")
+        container.styles.overflow_y = "scroll"
+
+    def on_key(self, event):
+        self.dismiss()
+
 class HelpScreen(ModalScreen):
     """Help screen showing available commands."""
     
@@ -199,7 +227,7 @@ Transcript:
         self.push_screen(HelpScreen())
 
     def action_show_transcript(self):
-        """Show full transcript when Enter is pressed"""
+        """Show full transcript in a modal when Enter is pressed"""
         selected_row = self.call_table.cursor_row
         if selected_row is None:
             return
@@ -215,11 +243,10 @@ Cost: ${call.Cost:.2f}
 
 {call.Transcript}
 """
-            self.transcript.update(transcript_text)
-            self.transcript.scroll_home()  # Scroll to top of transcript
+            self.push_screen(TranscriptScreen(transcript_text))
         except Exception as e:
             logger.error(f"Error showing transcript: {e}")
-            self.transcript.update(f"Error loading transcript: {str(e)}")
+            self.push_screen(TranscriptScreen(f"Error loading transcript: {str(e)}"))
 
     def action_edit_json(self):
         """Open the current call's JSON in external editor"""
