@@ -16,21 +16,10 @@ from textual.containers import Horizontal, Center, Container, Grid
 from textual.binding import Binding
 from textual.screen import ModalScreen
 from icecream import ic
+from cache import get_cached_calls, cache_calls, get_latest_cached_call, get_cache_stats
+from models import Call
 
 app = typer.Typer(no_args_is_help=True)
-
-class Call(BaseModel):
-    id: str
-    Caller: str
-    Transcript: str
-    Summary: str
-    Start: datetime
-    End: datetime
-    Cost: float = 0.0
-    CostBreakdown: dict = {}
-
-    def length_in_seconds(self):
-        return (self.End - self.Start).total_seconds()
 
 def parse_call(call) -> Call:
     """Parse a VAPI call response into a Call model."""
@@ -67,15 +56,81 @@ def parse_call(call) -> Call:
         CostBreakdown=cost_breakdown
     )
 
+def format_phone_number(phone: str) -> str:
+    """Format a phone number into a nice display format."""
+    # Remove any non-digit characters
+    digits = ''.join(filter(str.isdigit, phone))
+    
+    # Handle different length phone numbers
+    if len(digits) >= 10:  # Take last 10 digits if longer
+        last_ten = digits[-10:]  # Get last 10 digits
+        return f"({last_ten[:3]}){last_ten[3:6]}-{last_ten[6:]}"
+    else:
+        return phone  # Return original if we can't format it
+
 def vapi_calls() -> List[Call]:
-    headers = {
-        "authorization": f"{os.environ['VAPI_API_KEY']}",
-        "createdAtGE": (datetime.now() - timedelta(days=1)).isoformat(),
-    }
-    return [
-        parse_call(c)
-        for c in httpx.get("https://api.vapi.ai/call", headers=headers).json()
-    ]
+    """Get all calls from the last 24 hours, using cache when possible."""
+    from cache import get_cached_calls, cache_calls, get_latest_cached_call, get_cache_stats
+    
+    logger.debug("Fetching calls...")
+    stats = get_cache_stats()
+    logger.debug(f"Current cache stats: {stats}")
+    
+    try:
+        # Try to get cached calls first
+        cached_calls = get_cached_calls(max_age_minutes=1440)  # 24 hours
+        if cached_calls is not None:
+            logger.info(f"Found {len(cached_calls)} calls in cache")
+            
+            try:
+                # Get the latest call from API to check if we need to update cache
+                headers = {
+                    "authorization": f"{os.environ['VAPI_API_KEY']}",
+                    "createdAtGE": (datetime.now() - timedelta(minutes=10)).isoformat(),  # Look back 10 minutes
+                    "limit": "1"  # Only get the latest call
+                }
+                latest_api_call = httpx.get("https://api.vapi.ai/call", headers=headers).json()
+                
+                if latest_api_call:
+                    latest_api_call = parse_call(latest_api_call[0])
+                    latest_cached_call = get_latest_cached_call()
+                    
+                    # If the latest API call is already in our cache, return cached calls
+                    if latest_cached_call and latest_api_call.id == latest_cached_call.id:
+                        logger.info("Cache is up to date, using cached calls")
+                        return cached_calls
+                    else:
+                        logger.info("Found new calls, refreshing cache")
+            except Exception as e:
+                logger.warning(f"Error checking for new calls: {e}. Using cached calls as fallback.")
+                return cached_calls
+
+        logger.info("Cache miss or new calls available, fetching from API")
+        # If no valid cache or new calls exist, fetch all calls from API
+        headers = {
+            "authorization": f"{os.environ['VAPI_API_KEY']}",
+            "createdAtGE": (datetime.now() - timedelta(days=1)).isoformat(),
+        }
+        response = httpx.get("https://api.vapi.ai/call", headers=headers)
+        response.raise_for_status()  # Raise exception for bad status codes
+        calls_data = response.json()
+        
+        calls = [parse_call(c) for c in calls_data]
+        logger.info(f"Fetched {len(calls)} calls from API")
+        
+        # Cache the results
+        cache_calls(calls)
+        logger.info("Calls cached successfully")
+        
+        return calls
+        
+    except Exception as e:
+        logger.error(f"Error fetching calls: {e}")
+        # If we have cached calls and hit an error, use them as fallback
+        if cached_calls is not None:
+            logger.warning("Using cached calls as fallback due to error")
+            return cached_calls
+        raise  # Re-raise the exception if we have no fallback
 
 
 class SortScreen(ModalScreen):
@@ -86,7 +141,6 @@ class SortScreen(ModalScreen):
         ("t", "sort('time')", "Sort by Time"),
         ("l", "sort('length')", "Sort by Length"),
         ("c", "sort('cost')", "Sort by Cost"),
-        ("s", "sort('summary')", "Sort by Summary"),
         ("r", "toggle_reverse", "Toggle Reverse Sort"),
     ]
 
@@ -147,15 +201,14 @@ class SortScreen(ModalScreen):
                 yield Button("[T]ime", id="time", variant="primary")
                 yield Button("[L]ength", id="length")
                 yield Button("[C]ost", id="cost")
-                yield Button("[S]ummary", id="summary")
-            yield Label("Press 'R' to toggle reverse sort", id="reverse-label")
-            yield Label("Reverse sort: OFF", id="reverse-status")
+            yield Label("Press 'R' to toggle sort direction", id="reverse-label")
+            yield Label("Sort: Descending", id="reverse-status")
 
     def action_toggle_reverse(self):
         """Toggle reverse sort order."""
         self.reverse_sort = not self.reverse_sort
         status_label = self.query_one("#reverse-status", Label)
-        status_label.update(f"Reverse sort: {'ON' if self.reverse_sort else 'OFF'}")
+        status_label.update(f"Sort: {'Ascending' if self.reverse_sort else 'Descending'}")
 
     def action_sort(self, column: str):
         """Handle sort action for a column."""
@@ -163,15 +216,13 @@ class SortScreen(ModalScreen):
         app = self.app
         if isinstance(app, CallBrowserApp):
             # Sort the calls
-            reverse = self.reverse_sort
+            reverse = not self.reverse_sort
             if column == "time":
                 app.calls.sort(key=lambda x: x.Start, reverse=reverse)
             elif column == "length":
                 app.calls.sort(key=lambda x: x.length_in_seconds(), reverse=reverse)
             elif column == "cost":
                 app.calls.sort(key=lambda x: x.Cost, reverse=reverse)
-            else:  # summary
-                app.calls.sort(key=lambda x: x.Summary or "", reverse=reverse)
             
             # Refresh the table
             app.call_table.clear()
@@ -182,14 +233,13 @@ class SortScreen(ModalScreen):
                     start,
                     length,
                     f"${call.Cost:.2f}",
-                    call.Summary[:50] + "..." if call.Summary else "No summary",
                     key=call.id
                 )
         
         # Reset reverse sort status
         self.reverse_sort = False
         status_label = self.query_one("#reverse-status", Label)
-        status_label.update("Reverse sort: OFF")
+        status_label.update("Sort: Descending")
         
         # Dismiss the modal
         self.dismiss()
@@ -197,14 +247,14 @@ class SortScreen(ModalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press."""
         button_id = event.button.id
-        if button_id in ["time", "length", "cost", "summary"]:
+        if button_id in ["time", "length", "cost"]:
             self.action_sort(button_id)
 
     def on_mount(self) -> None:
         """Reset state when screen is mounted."""
         self.reverse_sort = False
         status_label = self.query_one("#reverse-status", Label)
-        status_label.update("Reverse sort: OFF")
+        status_label.update("Sort: Descending")
 
 class HelpScreen(ModalScreen):
     """Help screen showing available commands."""
@@ -253,47 +303,15 @@ class HelpScreen(ModalScreen):
     def on_key(self, event):
         self.dismiss()
 
-class TranscriptScreen(ModalScreen):
-    """Modal screen for displaying call transcript."""
-    
-    BINDINGS = [("escape,q", "dismiss", "Close")]
-
-    CSS = """
-    Screen {
-        align: center middle;
-    }
-
-    #transcript-container {
-        width: 80%;
-        height: 80%;
-        background: $boost;
-        border: tall $background;
-        padding: 1;
-    }
-
-    #transcript-content {
-        height: 100%;
-        overflow-y: scroll;
-        padding: 1;
-    }
-    """
-
-    def __init__(self, transcript: str):
-        super().__init__()
-        self.transcript = transcript
-
-    def compose(self) -> ComposeResult:
-        with Container(id="transcript-container"):
-            yield Static(f"Full Transcript:\n{self.transcript}", id="transcript-content")
-
 class EditScreen(ModalScreen):
     """Screen for editing options."""
     
     BINDINGS = [
-        ("escape", "dismiss", "Close"),
-        ("f", "edit_fx", "Edit in fx"),
-        ("s", "edit_summary", "Edit Summary"),
-        ("c", "edit_conversation", "Edit Conversation"),
+        ("escape,q", "dismiss", "Close"),
+        ("f", "edit_fx", "View in fx"),
+        ("s", "view_summary", "View Summary"),
+        ("c", "view_conversation", "View Conversation"),
+        ("v", "view_json", "View JSON in VI"),
     ]
 
     CSS = """
@@ -303,7 +321,7 @@ class EditScreen(ModalScreen):
     }
 
     #edit-container {
-        width: 60;
+        width: 40;
         height: auto;
         background: $boost;
         border: tall $background;
@@ -312,14 +330,14 @@ class EditScreen(ModalScreen):
 
     #edit-grid {
         layout: grid;
-        grid-size: 1 3;
-        grid-gutter: 1 2;
+        grid-size: 1;
         padding: 1;
         content-align: center middle;
     }
     
     Button {
         width: 100%;
+        margin-bottom: 1;
     }
 
     Label {
@@ -340,53 +358,52 @@ class EditScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Container(id="edit-container"):
-            yield Label("Edit Options:", id="edit-label")
+            yield Label("View Options (press q to close):", id="edit-label")
             with Grid(id="edit-grid"):
                 yield Button("[F]x View", id="fx", variant="primary")
-                yield Button("[S]ummary in vi", id="summary")
-                yield Button("[C]onversation in vi", id="conversation")
-
-    def _write_temp_file(self, content: str, suffix: str = '.json') -> str:
-        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix=suffix, delete=False)
-        with temp_file as f:
-            f.write(content)
-            return f.name
-
-    def _get_editor(self):
-        """Get the editor command from $EDITOR environment variable or fallback to bat."""
-        return os.environ.get('EDITOR', 'bat')
+                yield Button("[S]ummary", id="summary")
+                yield Button("[C]onversation", id="conversation")
+                yield Button("[V]iew JSON", id="view_json")
 
     def _run_external_command(self, command: str):
         """Run an external command with proper terminal handling."""
         try:
             # Remove focus to restore terminal to cooked mode
             self.app.set_focus(None)
-            # Run the command
-            if 'bat' in command:
-                command += ' | less'  # Ensure bat output is paginated
-            os.system(command)
+            # Run in new tmux window with 'q to close' in title
+            os.system(f'tmux new-window -n "q to close" "{command}"')
+        except Exception as e:
+            logger.error(f"Error running command: {e}")
         finally:
             # Restore focus to put terminal back in raw mode
             self.app.set_focus(self)
-            # Dismiss the screen
-            self.dismiss()
+
+    def _get_editor(self):
+        """Get the editor command from $EDITOR environment variable or fallback to vi."""
+        return os.environ.get('EDITOR', 'vi')
 
     def action_edit_fx(self):
         """Open the raw JSON in fx"""
         temp_path = self._write_temp_file(json.dumps(self.call_data, indent=2, default=str))
         self._run_external_command(f'fx {temp_path}')
 
-    def action_edit_summary(self):
-        """Open the summary in editor"""
+    def action_view_summary(self):
+        """Edit the summary in vi"""
         summary = self.call_data.get("analysis", {}).get("summary", "No summary available")
         temp_path = self._write_temp_file(summary, '.txt')
         editor = self._get_editor()
         self._run_external_command(f'{editor} {temp_path}')
 
-    def action_edit_conversation(self):
-        """Open the full conversation in editor"""
+    def action_view_conversation(self):
+        """Edit the full conversation in vi"""
         transcript = self.call_data.get("artifact", {}).get("transcript", "No transcript available")
-        temp_path = self._write_temp_file(transcript, '.txt')
+        temp_path = self._write_temp_file(transcript, '.vapi_transcript.txt')
+        editor = self._get_editor()
+        self._run_external_command(f'{editor} {temp_path}')
+
+    def action_view_json(self):
+        """View the entire call JSON in VI"""
+        temp_path = self._write_temp_file(json.dumps(self.call_data, indent=2, default=str))
         editor = self._get_editor()
         self._run_external_command(f'{editor} {temp_path}')
 
@@ -396,25 +413,33 @@ class EditScreen(ModalScreen):
         if button_id == "fx":
             self.action_edit_fx()
         elif button_id == "summary":
-            self.action_edit_summary()
+            self.action_view_summary()
         elif button_id == "conversation":
-            self.action_edit_conversation()
+            self.action_view_conversation()
+        elif button_id == "view_json":
+            self.action_view_json()
 
 class CallBrowserApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("j,down", "move_down", "Down"),
         Binding("k,up", "move_up", "Up"),
+        Binding("g,g", "move_top", "Top"),
+        Binding("G", "move_bottom", "Bottom"),
         Binding("?", "help", "Help"),
         Binding("e", "edit_json", "Edit JSON"),
         Binding("s", "sort", "Sort"),
         Binding("enter", "select_row", "Select"),
-        Binding("t", "show_transcript", "Transcript"),
     ]
 
     def on_mount(self) -> None:
         """Called when app is mounted"""
         logger.info(f"App mounted, bindings: {self.BINDINGS}")
+        # Select first row on load if there are any calls
+        if self.calls and len(self.calls) > 0:
+            self.call_table.move_cursor(row=0)
+            self.call_table.action_select_cursor()
+            self._update_views_for_current_row()
 
     def __init__(self):
         super().__init__()
@@ -431,19 +456,21 @@ class CallBrowserApp(App):
                 self.call_table.add_column("Time")
                 self.call_table.add_column("Length")
                 self.call_table.add_column("Cost")
-                self.call_table.add_column("Summary")
                 self.call_table.styles.width = "50%"
                 self.call_table.cursor_type = "row"
 
                 try:
                     for call in self.calls:
                         start = call.Start.strftime("%Y-%m-%d %H:%M")
-                        length = f"{call.length_in_seconds():.0f}s"
+                        # Format length in MM:SS
+                        length_seconds = call.length_in_seconds()
+                        minutes = int(length_seconds // 60)
+                        seconds = int(length_seconds % 60)
+                        length = f"{minutes}:{seconds:02d}"
                         self.call_table.add_row(
                             start,
                             length,
                             f"${call.Cost:.2f}",
-                            call.Summary[:50] + "..." if call.Summary else "No summary",
                             key=call.id
                         )
                     logger.info(f"Added {self.call_table.row_count} rows to table")
@@ -463,30 +490,13 @@ class CallBrowserApp(App):
             self.transcript.styles.overflow_y = "scroll"
             yield self.transcript
 
-    def action_show_transcript(self) -> None:
-        """Show the transcript modal for the current call"""
-        if self.current_call:
-            self.push_screen(TranscriptScreen(self.current_call.Transcript))
-
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the data table."""
         ic("Row selected event:", event)
         ic("Current cursor row:", self.call_table.cursor_row)
         if self.call_table.cursor_row is not None:
             self.current_call = self.calls[self.call_table.cursor_row]
-            details_text = f"""
-Start: {self.current_call.Start}
-End: {self.current_call.End}
-Length: {self.current_call.length_in_seconds():.0f}s
-Cost: ${self.current_call.Cost:.2f}
-Caller: {self.current_call.Caller}
-
-Summary:
-{self.current_call.Summary}
-
-Press 't' to view full transcript
-"""
-            self.details.update(details_text)
+            self._update_views_for_current_row()
 
     def action_select_row(self):
         """Handle enter key press to select row"""
@@ -545,8 +555,6 @@ Press 't' to view full transcript
                     self.calls.sort(key=lambda x: x.length_in_seconds())
                 elif column_name == "Cost":
                     self.calls.sort(key=lambda x: x.Cost)
-                elif column_name == "Summary":
-                    self.calls.sort(key=lambda x: x.Summary)
                 
                 # Refresh the table
                 self.call_table.clear()
@@ -557,7 +565,6 @@ Press 't' to view full transcript
                         start,
                         length,
                         f"${call.Cost:.2f}",
-                        call.Summary[:50] + "..." if call.Summary else "No summary",
                         key=call.id
                     )
 
@@ -599,26 +606,56 @@ Press 't' to view full transcript
             call = self.calls[selected_row]
             ic("Found call:", call.id)
             
-            details_text = f"""
-Start: {call.Start}
-End: {call.End}
-Length: {call.length_in_seconds():.0f}s
-Cost: ${call.Cost:.2f}
-Caller: {call.Caller}
+            # Format length in MM:SS
+            length_seconds = call.length_in_seconds()
+            minutes = int(length_seconds // 60)
+            seconds = int(length_seconds % 60)
+            length_str = f"{minutes}:{seconds:02d}"
+            
+            details_text = f"""[bold cyan]Start:[/] {call.Start.strftime("%Y-%m-%d %H:%M")}
+[bold yellow]Length:[/] {length_str}
+[bold green]Cost:[/] ${call.Cost:.2f}
+[bold magenta]Caller:[/] {format_phone_number(call.Caller)}
 
-Summary:
-{call.Summary}
-"""
+{call.Summary}"""
+            self.details.markup = True  # Enable markup parsing
             self.details.update(details_text)
             
-            # Update transcript without the "Full Transcript:" header
-            self.transcript.update(call.Transcript)
+            # Colorize the transcript
+            transcript_lines = call.Transcript.split('\n')
+            colored_lines = []
+            for line in transcript_lines:
+                if line.strip().startswith('AI:') or line.strip().startswith('Tony:'):
+                    prefix, rest = line.split(':', 1)
+                    colored_lines.append(f"[bright_cyan]{prefix}:[/][green]{rest}[/]")
+                elif line.strip().startswith('User:') or line.strip().startswith('Igor:'):
+                    prefix, rest = line.split(':', 1)
+                    colored_lines.append(f"[bright_yellow]{prefix}:[/][yellow]{rest}[/]")
+                else:
+                    colored_lines.append(line)
+            
+            colored_transcript = '\n'.join(colored_lines)
+            self.transcript.markup = True  # Enable markup parsing
+            self.transcript.update(colored_transcript)
             
         except Exception as e:
             logger.error(f"Error updating views: {e}")
             ic("Error updating views:", str(e))
             self.details.update(f"Error loading call details: {str(e)}")
             self.transcript.update(f"Error loading transcript: {str(e)}")
+
+    def action_move_top(self):
+        """Move cursor to top of list"""
+        self.call_table.move_cursor(row=0)
+        self.call_table.action_select_cursor()
+        self._update_views_for_current_row()
+
+    def action_move_bottom(self):
+        """Move cursor to bottom of list"""
+        last_row = len(self.calls) - 1
+        self.call_table.move_cursor(row=last_row)
+        self.call_table.action_select_cursor()
+        self._update_views_for_current_row()
 
 @app.command()
 def browse():

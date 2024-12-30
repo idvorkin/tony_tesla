@@ -34,14 +34,43 @@ dev = [
     "pytest",
     "pytest-asyncio", 
     "pytest-cov",
-    "textual-dev"
+    "textual-dev",
+    "pytest-timeout"
 ]
 
 [tool.setuptools]
-py-modules = ["tony", "storage", "bus", "calls"]
+py-modules = ["tony", "storage", "bus", "calls", "cache", "models"]
 
 [project.scripts]
 storage = "storage:app"
 tony = "tony:app"
 bus = "bus:app"
 calls = "calls:app"
+
+[tool.pytest.ini_options]
+testpaths = ["test_*.py"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+timeout = 300  # 5 minutes timeout for tests
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "pass",
+]
