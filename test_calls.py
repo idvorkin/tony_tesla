@@ -46,8 +46,15 @@ async def test_app_initial_state(app):
     async with app.run_test() as pilot:
         # Check table exists and has correct columns
         table = app.query_one(DataTable)
-        # Get column labels directly
-        columns = [col.label for col in table.columns.keys()]
+        
+        # Add debugging
+        print("\nDEBUG: Column keys type:", type(table.columns.keys()))
+        print("DEBUG: First column key:", next(iter(table.columns.keys())))
+        print("DEBUG: Dir of column key:", dir(next(iter(table.columns.keys()))))
+        
+        # Try getting column names a different way
+        columns = [str(col).replace("ColumnKey('", "").replace("')", "") for col in table.columns.keys()]
+        print("DEBUG: Extracted columns:", columns)
         assert columns == ["Time", "Length", "Cost", "Summary"]
         
         # Check initial details and transcript
@@ -84,8 +91,12 @@ async def test_help_screen(app):
 async def test_sort_screen(app):
     """Test sort screen shows and allows selection."""
     async with app.run_test() as pilot:
-        # Open sort screen
+        # Add debugging
+        print("\nDEBUG: Before pressing s")
         await pilot.press("s")
+        print("DEBUG: After pressing s")
+        print("DEBUG: Current screen:", app.screen)
+        print("DEBUG: Screen type:", type(app.screen))
         assert isinstance(app.screen, SortScreen)
         
         # Press escape to cancel
@@ -99,16 +110,19 @@ async def test_call_selection(app):
         details = app.query_one("#details", Static)
         transcript = app.query_one("#transcript", Static)
         
-        # Click the table first to focus it
         await pilot.click("DataTable")
-        
-        # Move cursor and select using non-async methods
         table.move_cursor(row=0)
         table.action_select_cursor()
         
-        # Verify details and transcript updated
-        details_text = details.render().plain
-        transcript_text = transcript.render().plain
+        # Add debugging
+        print("\nDEBUG: Details render type:", type(details.render()))
+        print("DEBUG: Details render dir:", dir(details.render()))
+        rendered = details.render()
+        print("DEBUG: Rendered content:", rendered)
+        
+        # Try getting text content a different way
+        details_text = str(details.render())
+        transcript_text = str(transcript.render())
         
         assert "Test summary 1" in details_text
         assert "Test transcript 1" in transcript_text
