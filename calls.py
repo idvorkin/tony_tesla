@@ -155,7 +155,6 @@ class CallBrowserApp(App):
     def on_mount(self) -> None:
         """Called when app is mounted"""
         logger.info(f"App mounted, bindings: {self.BINDINGS}")
-        super().on_mount()
 
     def __init__(self):
         super().__init__()
