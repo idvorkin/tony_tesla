@@ -101,6 +101,8 @@ async def test_call_selection(app):
         
         # Click the table first
         await pilot.click("DataTable")
+        # Click the table first
+        await pilot.click("DataTable")
         # Move cursor to first row using the proper method
         await table.move_cursor(row=0)
         # Select the row
