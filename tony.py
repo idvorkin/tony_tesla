@@ -280,7 +280,7 @@ from textual.screen import ModalScreen
 class HelpScreen(ModalScreen):
     """Help screen showing available commands."""
     
-    BINDINGS = [("escape,space,question_mark", "pop_screen", "Close")]
+    BINDINGS = [("escape,space,question_mark", "app.pop_screen", "Close")]
 
     def compose(self) -> ComposeResult:
         with Container():
@@ -301,13 +301,15 @@ class HelpScreen(ModalScreen):
     def on_mount(self) -> None:
         # Get the container
         container = self.query_one(Container)
-        # Center the container and its contents 
+        # Center the container and its contents
         container.styles.align = ("center", "middle")
         container.styles.height = "100%"
         container.styles.width = "100%"
 
     def on_key(self, event):
-        self.app.pop_screen()
+        # Only pop if we're not the last screen
+        if len(self.app._screen_stack) > 1:
+            self.app.pop_screen()
 
 class CallBrowserApp(App):
     BINDINGS = [
