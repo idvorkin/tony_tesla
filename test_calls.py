@@ -289,3 +289,153 @@ async def test_enter_key_navigation(sample_call):
         await pilot.press("tab")
         await pilot.pause()  # Add pause to allow focus change to complete
         assert app.focused == app.call_table
+
+@pytest.mark.asyncio
+async def test_arrow_key_navigation():
+    """Test that arrow keys behave the same as j/k for navigation"""
+    app = CallBrowserApp()
+    # Create two calls with different IDs
+    call1 = Call(
+        id="test-id-1",
+        Caller="1234567890",
+        Transcript="Tony: Hello\nIgor: Hi",
+        Summary="Test summary 1",
+        Start=datetime(2024, 1, 15, 14, 30, tzinfo=tz.tzutc()),
+        End=datetime(2024, 1, 15, 14, 35, tzinfo=tz.tzutc()),
+        Cost=1.23,
+        CostBreakdown={"transcription": 0.5, "analysis": 0.73}
+    )
+    call2 = Call(
+        id="test-id-2",
+        Caller="1234567890",
+        Transcript="Tony: Hello again\nIgor: Hi again",
+        Summary="Test summary 2",
+        Start=datetime(2024, 1, 15, 14, 40, tzinfo=tz.tzutc()),
+        End=datetime(2024, 1, 15, 14, 45, tzinfo=tz.tzutc()),
+        Cost=1.23,
+        CostBreakdown={"transcription": 0.5, "analysis": 0.73}
+    )
+    app.calls = [call1, call2]
+    
+    async with app.run_test() as pilot:
+        # Test initial state
+        assert app.call_table.cursor_row == 0
+        assert app.transcript.renderable == '[#7aa2f7]Tony:[/][#9ece6a] Hello[/]\n[#e0af68]Igor:[/][#f7768e] Hi[/]'
+        
+        # Test down arrow
+        await pilot.press("down")
+        await pilot.pause()
+        assert app.call_table.cursor_row == 1
+        assert app.transcript.renderable == '[#7aa2f7]Tony:[/][#9ece6a] Hello again[/]\n[#e0af68]Igor:[/][#f7768e] Hi again[/]'
+        
+        # Test up arrow
+        await pilot.press("up")
+        await pilot.pause()
+        assert app.call_table.cursor_row == 0
+        assert app.transcript.renderable == '[#7aa2f7]Tony:[/][#9ece6a] Hello[/]\n[#e0af68]Igor:[/][#f7768e] Hi[/]'
+        
+        # Test that j/k and arrow keys move to the same rows
+        await pilot.press("j")
+        await pilot.pause()
+        j_row = app.call_table.cursor_row
+        await pilot.press("k")
+        await pilot.pause()
+        await pilot.press("down")
+        await pilot.pause()
+        down_row = app.call_table.cursor_row
+        assert j_row == down_row == 1  # Both should move to row 1
+        
+        await pilot.press("up")
+        await pilot.pause()
+        up_row = app.call_table.cursor_row
+        await pilot.press("j")
+        await pilot.pause()
+        await pilot.press("k")
+        await pilot.pause()
+        k_row = app.call_table.cursor_row
+        assert up_row == k_row == 0  # Both should move to row 0
+
+@pytest.mark.asyncio
+async def test_empty_transcript_placeholder():
+    """Test that empty transcripts show a placeholder message"""
+    app = CallBrowserApp()
+    # Create a call with no transcript
+    call_no_transcript = Call(
+        id="test-id-empty",
+        Caller="1234567890",
+        Transcript="",
+        Summary="Test summary",
+        Start=datetime(2024, 1, 15, 14, 30, tzinfo=tz.tzutc()),
+        End=datetime(2024, 1, 15, 14, 35, tzinfo=tz.tzutc()),
+        Cost=1.23,
+        CostBreakdown={"transcription": 0.5, "analysis": 0.73}
+    )
+    app.calls = [call_no_transcript]
+    
+    async with app.run_test() as pilot:
+        # Verify placeholder is shown
+        assert app.transcript.renderable == '[#414868]<no transcript>[/]'
+        
+        # Test with whitespace-only transcript
+        call_whitespace = Call(
+            id="test-id-whitespace",
+            Caller="1234567890",
+            Transcript="   \n  \t  ",
+            Summary="Test summary",
+            Start=datetime(2024, 1, 15, 14, 30, tzinfo=tz.tzutc()),
+            End=datetime(2024, 1, 15, 14, 35, tzinfo=tz.tzutc()),
+            Cost=1.23,
+            CostBreakdown={"transcription": 0.5, "analysis": 0.73}
+        )
+        app.calls = [call_whitespace]
+        app.call_table.move_cursor(row=0)
+        app.call_table.action_select_cursor()
+        app._update_views_for_current_row()
+        
+        # Verify placeholder is shown for whitespace-only transcript
+        assert app.transcript.renderable == '[#414868]<no transcript>[/]'
+
+@pytest.mark.asyncio
+async def test_sort_updates_views():
+    """Test that sorting updates the transcript and details views"""
+    app = CallBrowserApp()
+    # Create two calls with different timestamps and transcripts
+    call1 = Call(
+        id="test-id-1",
+        Caller="1234567890",
+        Transcript="Tony: First call\nIgor: Hi",
+        Summary="First summary",
+        Start=datetime(2024, 1, 15, 14, 30, tzinfo=tz.tzutc()),
+        End=datetime(2024, 1, 15, 14, 35, tzinfo=tz.tzutc()),
+        Cost=1.23,
+        CostBreakdown={"transcription": 0.5, "analysis": 0.73}
+    )
+    call2 = Call(
+        id="test-id-2",
+        Caller="1234567890",
+        Transcript="Tony: Second call\nIgor: Hello",
+        Summary="Second summary",
+        Start=datetime(2024, 1, 15, 14, 40, tzinfo=tz.tzutc()),
+        End=datetime(2024, 1, 15, 14, 45, tzinfo=tz.tzutc()),
+        Cost=2.34,
+        CostBreakdown={"transcription": 1.0, "analysis": 1.34}
+    )
+    app.calls = [call1, call2]
+    
+    async with app.run_test() as pilot:
+        # Initial state should show first call
+        assert "First call" in app.transcript.renderable
+        assert "First summary" in app.details.renderable
+        
+        # Open sort screen
+        await pilot.press("s")
+        await pilot.pause()
+        
+        # Sort by cost (should put call2 first)
+        await pilot.press("c")
+        await pilot.pause()
+        
+        # Verify views updated to show the new first call
+        assert "Second call" in app.transcript.renderable
+        assert "Second summary" in app.details.renderable
+        assert app.call_table.cursor_row == 0

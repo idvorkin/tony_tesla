@@ -245,6 +245,11 @@ class SortScreen(ModalScreen):
                     f"${call.Cost:.2f}",
                     key=call.id
                 )
+            
+            # Update cursor and views
+            app.call_table.move_cursor(row=0)
+            app.call_table.action_select_cursor()
+            app._update_views_for_current_row()
         
         # Reset reverse sort status
         self.reverse_sort = False
@@ -379,6 +384,16 @@ class EditScreen(ModalScreen):
         super().__init__()
         self.call_data = call_data
 
+    def _write_temp_file(self, content: str, suffix: str = '.json') -> str:
+        """Write content to a temporary file and return its path."""
+        try:
+            with tempfile.NamedTemporaryFile(mode='w', suffix=suffix, delete=False) as temp:
+                temp.write(content)
+                return temp.name
+        except Exception as e:
+            logger.error(f"Error writing temporary file: {e}")
+            raise
+
     def compose(self) -> ComposeResult:
         with Container(id="edit-container"):
             yield Label("View Options (press q to close):", id="edit-label")
@@ -445,8 +460,10 @@ class EditScreen(ModalScreen):
 class CallBrowserApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
-        Binding("j,down", "move_down", "Down"),
-        Binding("k,up", "move_up", "Up"),
+        Binding("j", "move_down", "Down"),
+        Binding("k", "move_up", "Up"),
+        Binding("down", "move_down", "Down"),
+        Binding("up", "move_up", "Up"),
         Binding("g,g", "move_top", "Top"),
         Binding("G", "move_bottom", "Bottom"),
         Binding("tab", "focus_next", "Next Widget"),
@@ -710,6 +727,12 @@ class CallBrowserApp(App):
             self.details.markup = True
             self.details.update(details_text)
             
+            # Handle empty transcript
+            if not call.Transcript.strip():
+                self.transcript.markup = True
+                self.transcript.update("[#414868]<no transcript>[/]")
+                return
+            
             # Colorize the transcript
             transcript_lines = call.Transcript.split('\n')
             colored_lines = []
@@ -783,6 +806,12 @@ class CallBrowserApp(App):
         if event.key == "enter":
             event.prevent_default()  # Stop the key from being handled by the widget
             self.action_focus_next()
+        elif event.key == "up" or event.key == "down":
+            event.prevent_default()  # Stop arrow keys from being handled by the widget
+            if event.key == "up":
+                self.action_move_up()
+            else:
+                self.action_move_down()
 
 @app.command()
 def browse():
