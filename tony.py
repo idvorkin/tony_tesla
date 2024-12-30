@@ -331,11 +331,11 @@ class CallBrowserApp(App):
 
     def compose(self):
         # Create three columns using Horizontal layout
-        with Horizontal():
-            # Left column: Call list with explicit sizing
+        with Horizontal(classes="main-container"):
+            # Left column: Call list
             self.call_table = DataTable(id="calls")
             self.call_table.add_columns("Time", "Length", "Cost", "Summary")
-            self.call_table.styles.width = "30%"
+            self.call_table.styles.width = "33%"
             
             # Add calls to table with error handling
             try:
@@ -354,14 +354,18 @@ class CallBrowserApp(App):
                 logger.error(f"Error adding calls to table: {e}")
             yield self.call_table
 
-            # Middle column: Call details with explicit sizing
+            # Middle column: Call details
             self.details = Static("Select a call to view details", id="details")
-            self.details.styles.width = "35%"
+            self.details.styles.width = "33%"
+            self.details.styles.border = ("solid", "white")
             yield self.details
 
-            # Right column: JSON view with explicit sizing
+            # Right column: JSON view
             self.json_view = Static("Select a call to view JSON", id="json")
-            self.json_view.styles.width = "35%"
+            self.json_view.styles.width = "33%"
+            self.json_view.styles.border = ("solid", "white")
+            self.json_view.styles.overflow_y = "scroll"
+            self.json_view.styles.background = "black"
             yield self.json_view
 
     def on_data_table_row_selected(self, event):
@@ -392,8 +396,8 @@ Transcript:
             response = httpx.get(f"https://api.vapi.ai/call/{call.id}", headers=headers)
             raw_call = response.json()
             
-            # Format and update JSON view
-            json_text = json.dumps(raw_call, indent=2, default=str)
+            # Format and update JSON view with clear formatting
+            json_text = "Call Details (JSON):\n\n" + json.dumps(raw_call, indent=2, default=str)
             self.json_view.update(json_text)
             logger.info(f"Updated JSON view for call {call.id}")
         except Exception as e:
