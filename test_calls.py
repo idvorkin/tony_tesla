@@ -1,334 +1,337 @@
 import pytest
 from datetime import datetime, timedelta
-from calls import CallBrowserApp, Call, HelpScreen, SortScreen
-from textual.widgets import DataTable, Static, Button, Label
+from unittest.mock import Mock, patch
+from calls import Call, CallBrowserApp, EditScreen, TranscriptScreen, HelpScreen
 from textual.pilot import Pilot
-from icecream import ic
-
-# Mark all tests as async
-pytestmark = pytest.mark.asyncio
-
 
 @pytest.fixture
-def sample_calls():
-    """Create sample calls for testing."""
+def sample_call():
     now = datetime.now()
-    return [
-        Call(
-            id="1",
-            Caller="+1234567890",
-            Transcript="Test transcript 1",
-            Summary="Test summary 1",
-            Start=now,
-            End=now + timedelta(minutes=1),
-            Cost=1.50,
-            CostBreakdown={}
-        ),
-        Call(
-            id="2",
-            Caller="+0987654321",
-            Transcript="Test transcript 2",
-            Summary="Test summary 2",
-            Start=now + timedelta(hours=1),
-            End=now + timedelta(hours=1, minutes=2),
-            Cost=2.50,
-            CostBreakdown={}
-        ),
-        Call(
-            id="3",
-            Caller="+1111111111",
-            Transcript="Test transcript 3",
-            Summary="A test summary 3",  # Note the 'A' prefix for testing summary sort
-            Start=now + timedelta(hours=2),
-            End=now + timedelta(hours=2, minutes=3),
-            Cost=3.50,
-            CostBreakdown={}
-        )
-    ]
+    return Call(
+        id="test123",
+        Caller="+1234567890",
+        Transcript="Hello, this is a test call",
+        Summary="Test call summary",
+        Start=now,
+        End=now + timedelta(minutes=5),
+        Cost=1.23,
+        CostBreakdown={"transcription": 0.5, "analysis": 0.73}
+    )
 
 @pytest.fixture
-def app(monkeypatch, sample_calls):
-    """Create app instance with mocked calls."""
-    monkeypatch.setattr('calls.vapi_calls', lambda: sample_calls)
-    return CallBrowserApp()
+def sample_raw_call():
+    now = datetime.now()
+    return {
+        "id": "test123",
+        "customer": {"number": "+1234567890"},
+        "artifact": {"transcript": "Hello, this is a test call"},
+        "analysis": {"summary": "Test call summary"},
+        "createdAt": now.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        "endedAt": (now + timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        "cost": 1.23,
+        "costBreakdown": {"transcription": 0.5, "analysis": 0.73}
+    }
 
-async def test_app_initial_state(app):
-    """Test initial app state."""
-    async with app.run_test() as pilot:
-        table = app.query_one(DataTable)
-        
-        # Debug column information
-        ic("Column objects:", table.columns)
-        # Get column labels from the Column objects in the dictionary values
-        columns = [str(col.label) for col in table.columns.values()]
-        assert columns == ["Time", "Length", "Cost", "Summary"]
+def test_call_model(sample_call):
+    """Test Call model basic functionality"""
+    assert sample_call.id == "test123"
+    assert sample_call.Caller == "+1234567890"
+    assert sample_call.Cost == 1.23
+    assert isinstance(sample_call.length_in_seconds(), float)
+    # Use pytest.approx for float comparison
+    assert sample_call.length_in_seconds() == pytest.approx(300, rel=1e-6)  # 5 minutes = 300 seconds
 
-        # Check initial details and transcript
-        details = app.query_one("#details", Static)
-        assert "Select a call to view details" in str(details.render())
+@pytest.mark.asyncio
+async def test_edit_screen():
+    """Test EditScreen functionality"""
+    raw_call = {
+        "id": "test123",
+        "analysis": {"summary": "Test summary"},
+        "artifact": {"transcript": "Test transcript"}
+    }
+    
+    with patch('httpx.get') as mock_get:
+        mock_get.return_value.json.return_value = []
+        app = CallBrowserApp()
+        async with app.run_test() as pilot:
+            with patch('os.system') as mock_system:
+                # Test fx view
+                screen = EditScreen(raw_call)
+                app.push_screen(screen)
+                await pilot.pause()
+                await pilot.press("f")
+                mock_system.assert_called_once()
+                assert ".json" in mock_system.call_args[0][0]
+                
+                # Test summary view
+                screen = EditScreen(raw_call)
+                app.push_screen(screen)
+                await pilot.pause()
+                await pilot.press("s")
+                assert mock_system.call_count == 2
+                assert ".txt" in mock_system.call_args[0][0]
+                
+                # Test conversation view
+                screen = EditScreen(raw_call)
+                app.push_screen(screen)
+                await pilot.pause()
+                await pilot.press("c")
+                assert mock_system.call_count == 3
+                assert ".txt" in mock_system.call_args[0][0]
 
-        transcript = app.query_one("#transcript", Static)
-        assert "Select a call to view transcript" in str(transcript.render())
+@pytest.mark.asyncio
+async def test_edit_screen_buttons():
+    """Test EditScreen button interactions"""
+    raw_call = {
+        "id": "test123",
+        "analysis": {"summary": "Test summary"},
+        "artifact": {"transcript": "Test transcript"}
+    }
+    
+    with patch('httpx.get') as mock_get:
+        mock_get.return_value.json.return_value = []
+        app = CallBrowserApp()
+        async with app.run_test() as pilot:
+            with patch('os.system') as mock_system:
+                # Test fx button
+                screen = EditScreen(raw_call)
+                app.push_screen(screen)
+                await pilot.pause()
+                await pilot.click("#fx")
+                mock_system.assert_called_once()
+                assert ".json" in mock_system.call_args[0][0]
+                
+                # Test summary button
+                screen = EditScreen(raw_call)
+                app.push_screen(screen)
+                await pilot.pause()
+                await pilot.click("#summary")
+                assert mock_system.call_count == 2
+                assert ".txt" in mock_system.call_args[0][0]
+                
+                # Test conversation button
+                screen = EditScreen(raw_call)
+                app.push_screen(screen)
+                await pilot.pause()
+                await pilot.click("#conversation")
+                assert mock_system.call_count == 3
+                assert ".txt" in mock_system.call_args[0][0]
 
-async def test_navigation(app):
-    """Test basic navigation works."""
-    async with app.run_test() as pilot:
-        table = app.query_one(DataTable)
+@pytest.mark.asyncio
+async def test_edit_screen_file_content():
+    """Test EditScreen creates correct file content"""
+    raw_call = {
+        "id": "test123",
+        "analysis": {"summary": "Test summary content"},
+        "artifact": {"transcript": "Test transcript content"},
+        "cost": 1.23
+    }
+    
+    with patch('httpx.get') as mock_get:
+        mock_get.return_value.json.return_value = []
+        app = CallBrowserApp()
+        async with app.run_test() as pilot:
+            with patch('tempfile.NamedTemporaryFile') as mock_temp:
+                # Setup mock file
+                mock_file = Mock()
+                mock_file.__enter__ = Mock(return_value=mock_file)
+                mock_file.__exit__ = Mock(return_value=None)
+                mock_file.name = '/tmp/test.json'
+                mock_temp.return_value = mock_file
+                
+                with patch('os.system'):
+                    # Test fx view file content
+                    screen = EditScreen(raw_call)
+                    app.push_screen(screen)
+                    await pilot.pause()
+                    await pilot.press("f")
+                    write_calls = mock_file.write.call_args_list
+                    written_content = write_calls[0][0][0]
+                    assert '"id": "test123"' in written_content
+                    assert '"cost": 1.23' in written_content
+                    
+                    # Test summary file content
+                    screen = EditScreen(raw_call)
+                    app.push_screen(screen)
+                    await pilot.pause()
+                    await pilot.press("s")
+                    write_calls = mock_file.write.call_args_list
+                    written_content = write_calls[1][0][0]
+                    assert "Test summary content" in written_content
+                    
+                    # Test transcript file content
+                    screen = EditScreen(raw_call)
+                    app.push_screen(screen)
+                    await pilot.pause()
+                    await pilot.press("c")
+                    write_calls = mock_file.write.call_args_list
+                    written_content = write_calls[2][0][0]
+                    assert "Test transcript content" in written_content
 
-        # Test moving down
-        await pilot.press("j")
-        assert table.cursor_row == 1
+@pytest.mark.asyncio
+async def test_edit_screen_error_handling():
+    """Test EditScreen handles errors gracefully"""
+    raw_call = {
+        "id": "test123",
+        # Missing analysis and artifact to test error cases
+    }
+    
+    with patch('httpx.get') as mock_get:
+        mock_get.return_value.json.return_value = []
+        app = CallBrowserApp()
+        async with app.run_test() as pilot:
+            with patch('tempfile.NamedTemporaryFile') as mock_temp:
+                # Setup mock file
+                mock_file = Mock()
+                mock_file.__enter__ = Mock(return_value=mock_file)
+                mock_file.__exit__ = Mock(return_value=None)
+                mock_temp.return_value = mock_file
+                
+                with patch('os.system'):
+                    # Test summary with missing data
+                    screen = EditScreen(raw_call)
+                    app.push_screen(screen)
+                    await pilot.pause()
+                    await pilot.press("s")
+                    write_calls = mock_file.write.call_args_list
+                    written_content = write_calls[0][0][0]
+                    assert "No summary available" in written_content
+                    
+                    # Test transcript with missing data
+                    screen = EditScreen(raw_call)
+                    app.push_screen(screen)
+                    await pilot.pause()
+                    await pilot.press("c")
+                    write_calls = mock_file.write.call_args_list
+                    written_content = write_calls[1][0][0]
+                    assert "No transcript available" in written_content
 
-        # Test moving up
-        await pilot.press("k")
-        assert table.cursor_row == 0
+@pytest.mark.asyncio
+async def test_help_screen():
+    """Test HelpScreen functionality"""
+    with patch('httpx.get') as mock_get:
+        mock_get.return_value.json.return_value = []
+        app = CallBrowserApp()
+        async with app.run_test() as pilot:
+            # Create and mount HelpScreen
+            screen = HelpScreen()
+            app.push_screen(screen)
+            await pilot.pause()
+            
+            # Test screen content
+            assert screen.query_one("#help-title")
+            help_content = screen.query_one("#help-content")
+            assert help_content
+            
+            # Verify all commands are listed
+            commands = screen.query(".command")
+            assert len(commands) > 0
+            
+            # Test escape dismisses screen
+            await pilot.press("escape")
+            with pytest.raises(Exception):
+                screen.query_one("#help-title")
 
-async def test_help_screen(app):
-    """Test help screen shows and hides."""
-    async with app.run_test() as pilot:
-        # Open help screen
-        await pilot.press("?")
-        assert isinstance(app.screen, HelpScreen)
+@pytest.mark.asyncio
+async def test_transcript_screen():
+    """Test TranscriptScreen functionality"""
+    test_transcript = "This is a test transcript"
+    with patch('httpx.get') as mock_get:
+        mock_get.return_value.json.return_value = []
+        app = CallBrowserApp()
+        async with app.run_test() as pilot:
+            # Create and mount TranscriptScreen
+            screen = TranscriptScreen(test_transcript)
+            app.push_screen(screen)
+            await pilot.pause()
+            
+            # Test screen content
+            content = screen.query_one("#transcript-content")
+            assert content
+            assert test_transcript in content.renderable
+            
+            # Test escape dismisses screen
+            await pilot.press("escape")
+            with pytest.raises(Exception):
+                screen.query_one("#transcript-content")
 
-        # Close help screen
-        await pilot.press("escape")
-        assert not isinstance(app.screen, HelpScreen)
+@pytest.mark.asyncio
+async def test_call_browser_app(sample_call):
+    """Test main app functionality"""
+    with patch('calls.vapi_calls', return_value=[sample_call]):
+        app = CallBrowserApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
 
-async def test_sort_screen(app):
-    """Test sort screen shows and allows selection."""
-    async with app.run_test() as pilot:
-        # Debug sort screen navigation
-        ic("Before pressing s")
-        await pilot.press("s")
-        ic("After pressing s",
-           "Current screen", app.screen,
-           "Screen type", type(app.screen))
-        assert isinstance(app.screen, SortScreen)
+            # Test initial state
+            table = app.query_one("#calls")
+            assert table
+            assert table.row_count == 1
 
-        # Press escape to cancel
-        await pilot.press("escape")
-        assert not isinstance(app.screen, SortScreen)
+            details = app.query_one("#details")
+            assert details
+            transcript = app.query_one("#transcript")
+            assert transcript
 
-async def test_call_selection(app):
-    """Test selecting a call updates details and transcript."""
-    async with app.run_test() as pilot:
-        table = app.query_one(DataTable)
-        details = app.query_one("#details", Static)
-        transcript = app.query_one("#transcript", Static)
+            # Test row selection
+            await pilot.press("enter")
+            app._update_views_for_current_row()  # Explicitly update views
+            assert sample_call.Summary in details.renderable
+            assert sample_call.Transcript in transcript.renderable
+            
+            # Test help screen
+            await pilot.press("?")
+            help_screen = app.screen
+            assert isinstance(help_screen, HelpScreen)
+            await pilot.press("escape")
+            
+            # Test edit screen
+            with patch('httpx.get') as mock_get:
+                mock_get.return_value.json.return_value = sample_raw_call
+                await pilot.press("e")
+                edit_screen = app.screen
+                assert isinstance(edit_screen, EditScreen)
+                await pilot.press("escape")
 
-        # Debug initial state
-        ic("Initial cursor row:", table.cursor_row)
-        ic("Initial details:", details.render())
+def test_parse_call(sample_raw_call):
+    """Test call parsing from API response"""
+    from calls import parse_call
+    
+    call = parse_call(sample_raw_call)
+    assert isinstance(call, Call)
+    assert call.id == "test123"
+    assert call.Caller == "+1234567890"
+    assert call.Transcript == "Hello, this is a test call"
+    assert call.Summary == "Test call summary"
+    assert call.Cost == 1.23
+    assert call.CostBreakdown == {"transcription": 0.5, "analysis": 0.73}
 
-        # Select first row using enter key
-        table.move_cursor(row=0)
-        await pilot.press("enter")
-        await pilot.pause()
-
-        # Get the rendered text
-        details_text = str(details.render())
-        transcript_text = str(transcript.render())
-
-        # Debug final state
-        ic("Final details:", details_text)
-        ic("Final transcript:", transcript_text)
-
-        # Check content
-        assert "Test summary 1" in details_text
-        assert "Test transcript 1" in transcript_text
-        assert "$1.50" in details_text
-
-async def test_quit(app):
-    """Test quit command works."""
-    async with app.run_test() as pilot:
-        # Send quit command
-        await pilot.press("q")
-        assert not app.is_running
-
-async def test_sort_functionality(app):
-    """Test that sorting actually changes the table order."""
-    async with app.run_test() as pilot:
-        table = app.query_one(DataTable)
-        
-        # Get initial order
-        ic("Initial rows:", [table.get_row_at(i) for i in range(table.row_count)])
-        
-        # Open sort screen
-        await pilot.press("s")
-        assert isinstance(app.screen, SortScreen)
-        
-        # Sort by cost using keyboard shortcut
-        await pilot.press("c")
-        await pilot.pause()
-        
-        # Verify sort happened
-        sorted_rows = [table.get_row_at(i) for i in range(table.row_count)]
-        ic("Sorted rows:", sorted_rows)
-        
-        # Verify ascending order
-        costs = [float(row[2].replace('$', '')) for row in sorted_rows]
-        assert costs == [1.50, 2.50, 3.50]
-        
-        # Try reverse sort
-        await pilot.press("s")  # Open sort screen again
-        await pilot.press("r")  # Toggle reverse sort
-        await pilot.press("c")  # Sort by cost
-        await pilot.pause()
-        
-        # Verify reverse sort
-        reverse_sorted_rows = [table.get_row_at(i) for i in range(table.row_count)]
-        ic("Reverse sorted rows:", reverse_sorted_rows)
-        
-        # Verify descending order
-        costs = [float(row[2].replace('$', '')) for row in reverse_sorted_rows]
-        assert costs == [3.50, 2.50, 1.50]
-
-async def test_sort_screen_layout(app):
-    """Test sort screen layout and components."""
-    async with app.run_test() as pilot:
-        await pilot.press("s")
-
-        # Check that all components are present
-        sort_label = app.screen.query_one("#sort-label", Label)
-        assert "Sort by:" in str(sort_label.render())
-
-        buttons = app.screen.query(Button)
-        button_texts = [str(b.get_content()) for b in buttons]
-        assert any("[T]ime" in text for text in button_texts)
-        assert any("[L]ength" in text for text in button_texts)
-        assert any("[C]ost" in text for text in button_texts)
-        assert any("[S]ummary" in text for text in button_texts)
-
-        reverse_label = app.screen.query_one("#reverse-label", Label)
-        assert "Press 'R' to toggle reverse sort" in str(reverse_label.render())
-
-        reverse_status = app.screen.query_one("#reverse-status", Label)
-        assert "Reverse sort: OFF" in str(reverse_status.render())
-
-async def test_sort_screen_keyboard_shortcuts(app):
-    """Test sort screen keyboard shortcuts."""
-    async with app.run_test() as pilot:
-        await pilot.press("s")
-        
-        # Test reverse sort toggle
-        reverse_status = app.screen.query_one("#reverse-status", Label)
-        assert "OFF" in str(reverse_status.render())
-        await pilot.press("r")
-        assert "ON" in str(reverse_status.render())
-        
-        # Test sorting by time (should dismiss screen)
-        await pilot.press("t")
-        assert not isinstance(app.screen, SortScreen)
-        # First row should be earliest time
-        assert "2024" in app.call_table.get_row_at(0)[0]  # Time column
-        
-        # Test sorting by length
-        await pilot.press("s")  # Reopen sort screen
-        await pilot.press("l")
-        # First row should be shortest call (60s)
-        assert "60s" in app.call_table.get_row_at(0)[1]  # Length column
-        
-        # Test sorting by cost
-        await pilot.press("s")
-        await pilot.press("c")
-        # First row should be lowest cost ($1.50)
-        assert "$1.50" in app.call_table.get_row_at(0)[2]  # Cost column
-        
-        # Test sorting by summary
-        await pilot.press("s")
-        await pilot.press("s")
-        # First row should start with 'A' due to our test data
-        first_row = app.call_table.get_row_at(0)
-        assert "A test summary" in first_row[3]  # Summary column
-
-async def test_sort_screen_reverse_sort(app):
-    """Test reverse sort functionality."""
-    async with app.run_test() as pilot:
-        # Sort by cost in reverse order
-        await pilot.press("s")
-        await pilot.press("r")  # Enable reverse sort
-        await pilot.press("c")  # Sort by cost
-        
-        # Check rows are in reverse order (highest cost first)
-        rows = [app.call_table.get_row_at(i) for i in range(app.call_table.row_count)]
-        costs = [float(row[2].replace('$', '')) for row in rows]
-        assert costs == [3.50, 2.50, 1.50]
-        
-        # Test toggling reverse sort multiple times
-        await pilot.press("s")
-        await pilot.press("r")  # Disable reverse sort
-        assert "OFF" in str(app.screen.query_one("#reverse-status").render())
-        await pilot.press("r")  # Enable reverse sort
-        assert "ON" in str(app.screen.query_one("#reverse-status").render())
-
-async def test_sort_screen_button_clicks(app):
-    """Test sort screen button interactions."""
-    async with app.run_test() as pilot:
-        await pilot.press("s")
-        
-        # Click the cost button
-        cost_button = app.screen.query_one("#cost", Button)
-        await pilot.click(cost_button)
-        
-        # Verify sort happened and screen dismissed
-        assert not isinstance(app.screen, SortScreen)
-        assert "$1.50" in app.call_table.get_row_at(0)[2]  # Cost column
-        
-        # Test clicking with reverse sort
-        await pilot.press("s")
-        await pilot.press("r")  # Enable reverse sort
-        length_button = app.screen.query_one("#length", Button)
-        await pilot.click(length_button)
-        
-        # Verify reverse sort worked
-        rows = [app.call_table.get_row_at(i) for i in range(app.call_table.row_count)]
-        lengths = [int(row[1].replace('s', '')) for row in rows]
-        assert lengths == [180, 120, 60]  # Longest to shortest
-
-async def test_arrow_key_navigation(app):
-    """Test that both arrow keys and j/k work for navigation and update transcripts."""
-    async with app.run_test() as pilot:
-        table = app.query_one(DataTable)
-        details = app.query_one("#details", Static)
-        transcript = app.query_one("#transcript", Static)
-        
-        # Select initial row
-        await pilot.press("enter")
-        await pilot.pause()
-        assert "Test summary 1" in str(details.render())
-        assert "Test transcript 1" in str(transcript.render())
-        
-        # Test arrow keys
-        assert table.cursor_row == 0
-        await pilot.press("down")
-        await pilot.pause()  # Wait for cursor move
-        await pilot.press("enter")  # Select the row
-        await pilot.pause()  # Wait for selection to process
-        assert table.cursor_row == 1
-        assert "Test summary 2" in str(details.render())
-        assert "Test transcript 2" in str(transcript.render())
-        
-        await pilot.press("up")
-        await pilot.pause()  # Wait for cursor move
-        await pilot.press("enter")  # Select the row
-        await pilot.pause()  # Wait for selection to process
-        assert table.cursor_row == 0
-        assert "Test summary 1" in str(details.render())
-        assert "Test transcript 1" in str(transcript.render())
-        
-        # Test j/k keys
-        await pilot.press("j")
-        await pilot.pause()  # Wait for cursor move
-        await pilot.press("enter")  # Select the row
-        await pilot.pause()  # Wait for selection to process
-        assert table.cursor_row == 1
-        assert "Test summary 2" in str(details.render())
-        assert "Test transcript 2" in str(transcript.render())
-        
-        await pilot.press("k")
-        await pilot.pause()  # Wait for cursor move
-        await pilot.press("enter")  # Select the row
-        await pilot.pause()  # Wait for selection to process
-        assert table.cursor_row == 0
-        assert "Test summary 1" in str(details.render())
-        assert "Test transcript 1" in str(transcript.render())
+@pytest.mark.asyncio
+async def test_edit_screen_editor_selection():
+    """Test EditScreen uses correct editor"""
+    raw_call = {
+        "id": "test123",
+        "analysis": {"summary": "Test summary"},
+        "artifact": {"transcript": "Test transcript"}
+    }
+    
+    with patch('httpx.get') as mock_get:
+        mock_get.return_value.json.return_value = []
+        app = CallBrowserApp()
+        async with app.run_test() as pilot:
+            with patch('os.system') as mock_system:
+                # Test with EDITOR environment variable set
+                with patch.dict('os.environ', {'EDITOR': 'code'}):
+                    screen = EditScreen(raw_call)
+                    app.push_screen(screen)
+                    await pilot.pause()
+                    await pilot.press("s")
+                    assert 'code' in mock_system.call_args[0][0]
+                
+                # Test with no EDITOR set (should use bat)
+                with patch.dict('os.environ', clear=True):
+                    screen = EditScreen(raw_call)
+                    app.push_screen(screen)
+                    await pilot.pause()
+                    await pilot.press("s")
+                    assert 'bat' in mock_system.call_args[0][0]

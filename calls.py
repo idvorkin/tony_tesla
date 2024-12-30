@@ -253,6 +253,153 @@ class HelpScreen(ModalScreen):
     def on_key(self, event):
         self.dismiss()
 
+class TranscriptScreen(ModalScreen):
+    """Modal screen for displaying call transcript."""
+    
+    BINDINGS = [("escape,q", "dismiss", "Close")]
+
+    CSS = """
+    Screen {
+        align: center middle;
+    }
+
+    #transcript-container {
+        width: 80%;
+        height: 80%;
+        background: $boost;
+        border: tall $background;
+        padding: 1;
+    }
+
+    #transcript-content {
+        height: 100%;
+        overflow-y: scroll;
+        padding: 1;
+    }
+    """
+
+    def __init__(self, transcript: str):
+        super().__init__()
+        self.transcript = transcript
+
+    def compose(self) -> ComposeResult:
+        with Container(id="transcript-container"):
+            yield Static(f"Full Transcript:\n{self.transcript}", id="transcript-content")
+
+class EditScreen(ModalScreen):
+    """Screen for editing options."""
+    
+    BINDINGS = [
+        ("escape", "dismiss", "Close"),
+        ("f", "edit_fx", "Edit in fx"),
+        ("s", "edit_summary", "Edit Summary"),
+        ("c", "edit_conversation", "Edit Conversation"),
+    ]
+
+    CSS = """
+    Screen {
+        align: center middle;
+        background: $primary 30%;
+    }
+
+    #edit-container {
+        width: 60;
+        height: auto;
+        background: $boost;
+        border: tall $background;
+        padding: 1;
+    }
+
+    #edit-grid {
+        layout: grid;
+        grid-size: 1 3;
+        grid-gutter: 1 2;
+        padding: 1;
+        content-align: center middle;
+    }
+    
+    Button {
+        width: 100%;
+    }
+
+    Label {
+        content-align: center middle;
+        width: 100%;
+        padding: 1;
+    }
+
+    #edit-label {
+        color: $secondary;
+        text-style: bold;
+    }
+    """
+    
+    def __init__(self, call_data: dict):
+        super().__init__()
+        self.call_data = call_data
+
+    def compose(self) -> ComposeResult:
+        with Container(id="edit-container"):
+            yield Label("Edit Options:", id="edit-label")
+            with Grid(id="edit-grid"):
+                yield Button("[F]x View", id="fx", variant="primary")
+                yield Button("[S]ummary in vi", id="summary")
+                yield Button("[C]onversation in vi", id="conversation")
+
+    def _write_temp_file(self, content: str, suffix: str = '.json') -> str:
+        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix=suffix, delete=False)
+        with temp_file as f:
+            f.write(content)
+            return f.name
+
+    def _get_editor(self):
+        """Get the editor command from $EDITOR environment variable or fallback to bat."""
+        return os.environ.get('EDITOR', 'bat')
+
+    def _run_external_command(self, command: str):
+        """Run an external command with proper terminal handling."""
+        try:
+            # Remove focus to restore terminal to cooked mode
+            self.app.set_focus(None)
+            # Run the command
+            if 'bat' in command:
+                command += ' | less'  # Ensure bat output is paginated
+            os.system(command)
+        finally:
+            # Restore focus to put terminal back in raw mode
+            self.app.set_focus(self)
+            # Dismiss the screen
+            self.dismiss()
+
+    def action_edit_fx(self):
+        """Open the raw JSON in fx"""
+        temp_path = self._write_temp_file(json.dumps(self.call_data, indent=2, default=str))
+        self._run_external_command(f'fx {temp_path}')
+
+    def action_edit_summary(self):
+        """Open the summary in editor"""
+        summary = self.call_data.get("analysis", {}).get("summary", "No summary available")
+        temp_path = self._write_temp_file(summary, '.txt')
+        editor = self._get_editor()
+        self._run_external_command(f'{editor} {temp_path}')
+
+    def action_edit_conversation(self):
+        """Open the full conversation in editor"""
+        transcript = self.call_data.get("artifact", {}).get("transcript", "No transcript available")
+        temp_path = self._write_temp_file(transcript, '.txt')
+        editor = self._get_editor()
+        self._run_external_command(f'{editor} {temp_path}')
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press."""
+        button_id = event.button.id
+        if button_id == "fx":
+            self.action_edit_fx()
+        elif button_id == "summary":
+            self.action_edit_summary()
+        elif button_id == "conversation":
+            self.action_edit_conversation()
+
 class CallBrowserApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
@@ -262,6 +409,7 @@ class CallBrowserApp(App):
         Binding("e", "edit_json", "Edit JSON"),
         Binding("s", "sort", "Sort"),
         Binding("enter", "select_row", "Select"),
+        Binding("t", "show_transcript", "Transcript"),
     ]
 
     def on_mount(self) -> None:
@@ -272,6 +420,7 @@ class CallBrowserApp(App):
         super().__init__()
         self.calls = vapi_calls()
         logger.info(f"Loaded {len(self.calls)} calls")
+        self.current_call = None
 
     def compose(self):
         """Change layout to horizontal split with transcript below"""
@@ -314,28 +463,30 @@ class CallBrowserApp(App):
             self.transcript.styles.overflow_y = "scroll"
             yield self.transcript
 
+    def action_show_transcript(self) -> None:
+        """Show the transcript modal for the current call"""
+        if self.current_call:
+            self.push_screen(TranscriptScreen(self.current_call.Transcript))
+
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the data table."""
         ic("Row selected event:", event)
         ic("Current cursor row:", self.call_table.cursor_row)
         if self.call_table.cursor_row is not None:
-            call = self.calls[self.call_table.cursor_row]
+            self.current_call = self.calls[self.call_table.cursor_row]
             details_text = f"""
-Start: {call.Start}
-End: {call.End}
-Length: {call.length_in_seconds():.0f}s
-Cost: ${call.Cost:.2f}
-Caller: {call.Caller}
+Start: {self.current_call.Start}
+End: {self.current_call.End}
+Length: {self.current_call.length_in_seconds():.0f}s
+Cost: ${self.current_call.Cost:.2f}
+Caller: {self.current_call.Caller}
 
 Summary:
-{call.Summary}
+{self.current_call.Summary}
+
+Press 't' to view full transcript
 """
             self.details.update(details_text)
-            
-            transcript_text = f"""Full Transcript:
-{call.Transcript}
-"""
-            self.transcript.update(transcript_text)
 
     def action_select_row(self):
         """Handle enter key press to select row"""
@@ -414,7 +565,7 @@ Summary:
 
 
     def action_edit_json(self):
-        """Open the current call's JSON in external editor"""
+        """Show edit options modal"""
         selected_row = self.call_table.cursor_row
         if selected_row is None:
             logger.warning("No row selected")
@@ -430,23 +581,10 @@ Summary:
             response = httpx.get(f"https://api.vapi.ai/call/{call_id}", headers=headers)
             raw_call = response.json()
 
-            temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
-            with temp_file as f:
-                json.dump(raw_call, f, indent=2, default=str)
-                temp_path = f.name
-
-            if os.name == 'nt':  # Windows
-                os.system(f'notepad {temp_path}')
-            else:  # Unix
-                os.system(f'fx {temp_path}')
-
-            # Refresh all panes by re-selecting the current row
-            self.refresh()
-            if selected_row is not None:
-                self.call_table.select_row(selected_row)
+            self.push_screen(EditScreen(raw_call))
 
         except Exception as e:
-            logger.error(f"Error opening JSON: {e}")
+            logger.error(f"Error opening edit options: {e}")
 
     def _update_views_for_current_row(self):
         """Update both details and transcript for current row"""
@@ -473,10 +611,8 @@ Summary:
 """
             self.details.update(details_text)
             
-            transcript_text = f"""Full Transcript:
-{call.Transcript}
-"""
-            self.transcript.update(transcript_text)
+            # Update transcript without the "Full Transcript:" header
+            self.transcript.update(call.Transcript)
             
         except Exception as e:
             logger.error(f"Error updating views: {e}")

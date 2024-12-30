@@ -26,7 +26,7 @@ dependencies = [
     "pathlib",
     "onebusaway",
     "modal",
-    "textual"
+    "textual>=1.0.0"
 ]
 
 [project.optional-dependencies]
