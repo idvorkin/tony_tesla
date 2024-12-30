@@ -78,6 +78,35 @@ def vapi_calls() -> List[Call]:
     ]
 
 
+class SortScreen(ModalScreen):
+    """Sort selection screen"""
+
+    def __init__(self, columns):
+        super().__init__()
+        self.columns = columns
+
+    def compose(self) -> ComposeResult:
+        with Container(classes="sort-overlay"):
+            yield Static("Select column to sort by:")
+            for i, col in enumerate(self.columns, 1):
+                yield Static(f"{i}. {col}")
+            yield Static("\nPress 1-{} to sort, or ESC to cancel".format(len(self.columns)))
+
+    def on_mount(self) -> None:
+        container = self.query_one(Container)
+        container.styles.align = ("center", "middle")
+        container.styles.height = "auto"
+        container.styles.width = "auto"
+        container.styles.background = "rgba(0,0,0,0.8)"
+        container.styles.padding = (2, 4)
+        container.styles.border = ("solid", "white")
+
+    def on_key(self, event):
+        if event.key == "escape":
+            self.dismiss(None)
+        elif event.key in [str(i) for i in range(1, len(self.columns) + 1)]:
+            self.dismiss(int(event.key) - 1)
+
 class HelpScreen(ModalScreen):
     """Help screen showing available commands."""
 
@@ -93,6 +122,7 @@ class HelpScreen(ModalScreen):
 ║  j - Move down             ║
 ║  k - Move up              ║
 ║  e - Edit JSON details    ║
+║  s - Sort by column       ║
 ║  q - Quit application     ║
 ║                            ║
 ║  Press any key to close    ║
@@ -121,6 +151,7 @@ class CallBrowserApp(App):
         Binding("k", "move_up", "Up"),
         Binding("?", "help", "Help"),
         Binding("e", "edit_json", "Edit JSON"),
+        Binding("s", "sort", "Sort"),
     ]
 
     def on_mount(self) -> None:
@@ -247,6 +278,43 @@ Cost: ${call.Cost:.2f}
     def action_help(self):
         """Show help screen when ? is pressed."""
         self.push_screen(HelpScreen())
+
+    def action_sort(self):
+        """Show sort column selection screen"""
+        async def show_sort_screen() -> None:
+            # Get column names from the DataTable
+            columns = [col.label for col in self.call_table.columns]
+            screen = SortScreen(columns)
+            column_index = await self.push_screen_wait(screen)
+            
+            if column_index is not None:  # None means user cancelled
+                # Sort the calls based on the selected column
+                column_name = columns[column_index]
+                
+                # Define sort key based on column
+                if column_name == "Time":
+                    self.calls.sort(key=lambda x: x.Start)
+                elif column_name == "Length":
+                    self.calls.sort(key=lambda x: x.length_in_seconds())
+                elif column_name == "Cost":
+                    self.calls.sort(key=lambda x: x.Cost)
+                elif column_name == "Summary":
+                    self.calls.sort(key=lambda x: x.Summary)
+                
+                # Refresh the table
+                self.call_table.clear()
+                for call in self.calls:
+                    start = call.Start.strftime("%Y-%m-%d %H:%M")
+                    length = f"{call.length_in_seconds():.0f}s"
+                    self.call_table.add_row(
+                        start,
+                        length,
+                        f"${call.Cost:.2f}",
+                        call.Summary[:50] + "..." if call.Summary else "No summary",
+                        key=call.id
+                    )
+
+        self.run_worker(show_sort_screen())
 
 
     def action_edit_json(self):
