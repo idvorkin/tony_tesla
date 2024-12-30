@@ -202,6 +202,22 @@ def last_transcript():
 
 
 @app.command()
+def dump_last_call():
+    """Dump the complete raw JSON of the most recent call"""
+    headers = {
+        "authorization": f"{os.environ['VAPI_API_KEY']}",
+        "createdAtGE": (datetime.now() - timedelta(days=1)).isoformat(),
+    }
+    calls = httpx.get("https://api.vapi.ai/call", headers=headers).json()
+    if not calls:
+        print("No calls found")
+        return
+        
+    # Get most recent call's complete data and print it
+    print(json.dumps(calls[0], indent=2))
+
+
+@app.command()
 def export_vapi_tony_config(assistant_id=TONY_ASSISTANT_ID):
     """Export the current VAPI Tony assistant configuration."""
     headers = {
