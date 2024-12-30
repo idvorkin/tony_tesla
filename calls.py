@@ -236,7 +236,10 @@ Transcript:
                 os.system(f'notepad {temp_path}')
             else:  # Unix
                 os.system(f'fx {temp_path}')
-                
+            
+            # Add refresh after returning from editor
+            self.refresh()
+            
         except Exception as e:
             logger.error(f"Error opening JSON: {e}")
 
