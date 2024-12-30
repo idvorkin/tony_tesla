@@ -280,10 +280,11 @@ from textual.screen import ModalScreen
 class HelpScreen(ModalScreen):
     """Help screen showing available commands."""
     
+    BINDINGS = [("escape,space,question_mark", "pop_screen", "Close")]
+
     def compose(self) -> ComposeResult:
-        with Center():
-            yield Static(
-                """╔════════════════════════════╗
+        yield Static(
+            """╔════════════════════════════╗
 ║      Available Commands     ║
 ║                            ║
 ║  ? - Show this help        ║
@@ -293,10 +294,20 @@ class HelpScreen(ModalScreen):
 ║                            ║
 ║  Press any key to close    ║
 ╚════════════════════════════╝""",
-                id="help-text"
-            )
+            id="help-text"
+        )
 
-    def on_key(self):
+    def on_mount(self) -> None:
+        # Get the help text widget
+        help_text = self.query_one("#help-text")
+        
+        # Center it on screen
+        help_text.styles.align = ("center", "middle")
+        help_text.styles.dock = "center"
+        help_text.styles.width = "auto"
+        help_text.styles.height = "auto"
+
+    def on_key(self, event):
         self.app.pop_screen()
 
 class CallBrowserApp(App):
