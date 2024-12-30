@@ -273,7 +273,7 @@ def parse_calls(
 
 from textual.app import App, ComposeResult
 from textual.widgets import DataTable, Static, Footer, Label
-from textual.containers import Horizontal, Center
+from textual.containers import Horizontal, Center, Container
 from textual.binding import Binding
 from textual.screen import ModalScreen
 
@@ -283,8 +283,9 @@ class HelpScreen(ModalScreen):
     BINDINGS = [("escape,space,question_mark", "pop_screen", "Close")]
 
     def compose(self) -> ComposeResult:
-        yield Static(
-            """╔════════════════════════════╗
+        with Container():
+            yield Static(
+                """╔════════════════════════════╗
 ║      Available Commands     ║
 ║                            ║
 ║  ? - Show this help        ║
@@ -294,18 +295,16 @@ class HelpScreen(ModalScreen):
 ║                            ║
 ║  Press any key to close    ║
 ╚════════════════════════════╝""",
-            id="help-text"
-        )
+                id="help-text"
+            )
 
     def on_mount(self) -> None:
-        # Get the help text widget
-        help_text = self.query_one("#help-text")
-        
-        # Center it on screen
-        help_text.styles.align = ("center", "middle")
-        help_text.styles.dock = "center"
-        help_text.styles.width = "auto"
-        help_text.styles.height = "auto"
+        # Get the container
+        container = self.query_one(Container)
+        # Center the container and its contents 
+        container.styles.align = ("center", "middle")
+        container.styles.height = "100%"
+        container.styles.width = "100%"
 
     def on_key(self, event):
         self.app.pop_screen()
