@@ -7,13 +7,6 @@ from textual.pilot import Pilot
 # Mark all tests as async
 pytestmark = pytest.mark.asyncio
 
-@pytest.fixture(scope="function")
-def event_loop():
-    """Create an instance of the default event loop for each test case."""
-    import asyncio
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 @pytest.fixture
 def sample_calls():
@@ -53,9 +46,10 @@ async def test_app_initial_state(app):
     async with app.run_test() as pilot:
         # Check table exists and has correct columns
         table = app.query_one(DataTable)
-        assert [str(col).strip("ColumnKey('')") for col in table.columns.keys()] == [
-            "Time", "Length", "Cost", "Summary"
-        ]
+        # Extract just the column names from the ColumnKey objects
+        columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
+                  for col in table.columns.keys()]
+        assert columns == ["Time", "Length", "Cost", "Summary"]
         
         # Check initial details and transcript
         details = app.query_one("#details", Static)
@@ -106,8 +100,11 @@ async def test_call_selection(app):
         details = app.query_one("#details", Static)
         transcript = app.query_one("#transcript", Static)
         
-        # Select first row
-        await pilot.click(f"DataTable @ 0,0")
+        # Click the table first
+        await pilot.click("DataTable")
+        # Then simulate selecting the first row
+        table.cursor_row = 0
+        table.action_select_cursor()
         
         # Verify details and transcript updated
         details_text = details.render()
