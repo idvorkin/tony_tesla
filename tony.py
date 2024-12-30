@@ -456,7 +456,7 @@ Transcript:
             if os.name == 'nt':  # Windows
                 os.system(f'notepad {temp_path}')
             else:  # Unix
-                editor = os.environ.get('EDITOR', 'vim')
+                editor = os.environ.get('EDITOR', 'fx')  # Changed default from vim to fx
                 os.system(f'{editor} {temp_path}')
                 
         except Exception as e:
