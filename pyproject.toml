@@ -30,7 +30,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = []
+dev = [
+    "pytest",
+    "pytest-asyncio", 
+    "pytest-cov",
+    "textual-dev"
+]
 
 [tool.setuptools]
 py-modules = ["tony", "storage", "bus", "calls"]

@@ -47,32 +47,30 @@ async def test_app_initial_state(app):
         # Check table exists and has correct columns
         table = app.query_one(DataTable)
         
-        # Add extensive debugging
-        print("\nDEBUG: Column keys type:", type(table.columns.keys()))
-        print("DEBUG: All column keys:", list(table.columns.keys()))
-        print("DEBUG: First column key:", next(iter(table.columns.keys())))
-        print("DEBUG: Dir of column key:", dir(next(iter(table.columns.keys()))))
+        # Add comprehensive widget debugging
+        print("\nDEBUG: App widget tree:")
+        print(app.query("*"))
         
-        # Try different ways to get column names
-        print("\nDEBUG: Attempting different column name extraction methods:")
-        try:
-            print("1. Using str():", [str(col) for col in table.columns.keys()])
-        except Exception as e:
-            print(f"Error with str(): {e}")
-            
-        try:
-            print("2. Using value:", [col.value for col in table.columns.keys()])
-        except Exception as e:
-            print(f"Error with value: {e}")
-            
-        try:
-            print("3. Using _value:", [getattr(col, '_value', None) for col in table.columns.keys()])
-        except Exception as e:
-            print(f"Error with _value: {e}")
-
-        # Extract column names with debug info
-        columns = [col.value for col in table.columns.keys()]
-        print("\nDEBUG: Final extracted columns:", columns)
+        print("\nDEBUG: DataTable properties:")
+        print(f"Table exists: {table is not None}")
+        print(f"Table class: {table.__class__.__name__}")
+        print(f"Table id: {table.id}")
+        print(f"Row count: {table.row_count}")
+        print(f"Column count: {len(table.columns)}")
+        
+        # Debug column information
+        print("\nDEBUG: Column details:")
+        for i, col in enumerate(table.columns):
+            print(f"Column {i}:")
+            print(f"  Key: {col}")
+            print(f"  Type: {type(col)}")
+            print(f"  Dir: {dir(col)}")
+            print(f"  Str repr: {str(col)}")
+        
+        # Extract and verify columns
+        columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
+                  for col in table.columns.keys()]
+        print("\nDEBUG: Extracted columns:", columns)
         
         assert columns == ["Time", "Length", "Cost", "Summary"]
         
