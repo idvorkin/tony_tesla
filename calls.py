@@ -199,11 +199,50 @@ Cost: ${call.Cost:.2f}
             self.details.update(f"Error loading call details: {str(e)}")
             self.transcript.update(f"Error loading transcript: {str(e)}")
 
+    def _update_views_for_current_row(self):
+        """Update both details and transcript for current row"""
+        selected_row = self.call_table.cursor_row
+        if selected_row is None:
+            return
+            
+        try:
+            call = self.calls[selected_row]
+            
+            details_text = f"""
+Start: {call.Start}
+End: {call.End}
+Length: {call.length_in_seconds():.0f}s
+Cost: ${call.Cost:.2f}
+Caller: {call.Caller}
+
+Summary:
+{call.Summary}
+"""
+            self.details.update(details_text)
+            
+            transcript_text = f"""Full Transcript for call {call.id}
+Time: {call.Start.strftime('%Y-%m-%d %H:%M')}
+Length: {call.length_in_seconds():.0f}s
+Cost: ${call.Cost:.2f}
+
+{call.Transcript}
+"""
+            self.transcript.update(transcript_text)
+            
+        except Exception as e:
+            logger.error(f"Error updating views: {e}")
+            self.details.update(f"Error loading call details: {str(e)}")
+            self.transcript.update(f"Error loading transcript: {str(e)}")
+
     def action_move_down(self):
+        """Move cursor down and update transcript"""
         self.call_table.action_cursor_down()
+        self._update_views_for_current_row()
 
     def action_move_up(self):
+        """Move cursor up and update transcript"""
         self.call_table.action_cursor_up()
+        self._update_views_for_current_row()
 
     def action_help(self):
         """Show help screen when ? is pressed."""
