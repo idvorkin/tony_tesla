@@ -46,3 +46,39 @@ Return Type: OrderDetailsResponse (which may include nested models like ProductI
 
 When possible update the tests to reflect the new changes.
 Tests are in the test directory
+
+### TUI Applications
+
+When creating TUI (Text User Interface) applications:
+- Use Textual library for TUI apps
+- Include standard key bindings:
+  ```python
+  BINDINGS = [
+      Binding("q", "quit", "Quit"),
+      Binding("j", "move_down", "Down"), 
+      Binding("k", "move_up", "Up"),
+      Binding("?", "help", "Help")
+  ]
+  ```
+- Include a Help screen modal that shows available commands
+- Use DataTable for tabular data display
+- Use Static widgets for text display areas
+- Use Container for layout management
+- Include proper error handling with loguru
+- Follow this structure for the main app:
+  ```python
+  class MyTUIApp(App):
+      # Define bindings
+      # Define compose() for layout
+      # Define action methods for commands
+  
+  @app.command()
+  def browse():
+      """Browse data in an interactive TUI"""
+      app = MyTUIApp()
+      app.run()
+  
+  @logger.catch()
+  def app_wrap_loguru():
+      app()
+  ```
