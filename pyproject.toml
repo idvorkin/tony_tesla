@@ -24,8 +24,7 @@ dependencies = [
     "requests",
     "python-dateutil",
     "pathlib",
-    "onebusaway", 
-    "httpx",
+    "onebusaway",
     "modal",
     "textual"
 ]
