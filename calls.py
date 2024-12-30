@@ -248,10 +248,16 @@ Cost: ${call.Cost:.2f}
 
 {call.Transcript}
 """
+            # Update the bottom transcript pane
+            self.transcript.update(transcript_text)
+            
+            # Show the modal popup
             self.push_screen(TranscriptScreen(transcript_text))
         except Exception as e:
             logger.error(f"Error showing transcript: {e}")
-            self.push_screen(TranscriptScreen(f"Error loading transcript: {str(e)}"))
+            error_message = f"Error loading transcript: {str(e)}"
+            self.transcript.update(error_message)
+            self.push_screen(TranscriptScreen(error_message))
 
     def action_edit_json(self):
         """Open the current call's JSON in external editor"""
