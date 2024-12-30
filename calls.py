@@ -120,7 +120,7 @@ class HelpScreen(ModalScreen):
 ║  j - Move down             ║
 ║  k - Move up              ║
 ║  e - Edit JSON details    ║
-║  Enter - Show transcript   ║
+║  d - Show transcript      ║
 ║  q - Quit application     ║
 ║                            ║
 ║  Press any key to close    ║
@@ -149,7 +149,7 @@ class CallBrowserApp(App):
         Binding("k", "move_up", "Up"),
         Binding("?", "help", "Help"),
         Binding("e", "edit_json", "Edit JSON"),
-        Binding("return", "show_transcript", "Show Transcript"),
+        Binding("d", "show_transcript", "Show Details"),
     ]
 
     def on_mount(self) -> None:
@@ -191,7 +191,7 @@ class CallBrowserApp(App):
                 yield self.details
 
             # Bottom transcript pane
-            self.transcript = Static("Press Enter to view transcript", id="transcript")
+            self.transcript = Static("Press 'd' to view transcript", id="transcript")
             self.transcript.styles.height = "50vh"  # Take up half vertical height
             self.transcript.styles.border = ("solid", "white")
             self.transcript.styles.overflow_y = "scroll"
