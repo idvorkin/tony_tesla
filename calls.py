@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!python3
 
 import os
 import json
@@ -21,7 +21,7 @@ app = typer.Typer(no_args_is_help=True)
 
 class Call(BaseModel):
     id: str
-    Caller: str 
+    Caller: str
     Transcript: str
     Summary: str
     Start: datetime
@@ -42,8 +42,8 @@ def parse_call(call) -> Call:
     ended_at = call.get("endedAt", created_at)
 
     start_dt = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%S.%fZ")
-    end_dt = datetime.strptime(ended_at, "%Y-%m-%dT%H:%M:%S.%fZ") 
-    
+    end_dt = datetime.strptime(ended_at, "%Y-%m-%dT%H:%M:%S.%fZ")
+
     start_dt = start_dt.replace(tzinfo=tz.tzutc()).astimezone(tz.tzlocal())
     end_dt = end_dt.replace(tzinfo=tz.tzutc()).astimezone(tz.tzlocal())
 
@@ -80,7 +80,7 @@ def vapi_calls() -> List[Call]:
 
 class HelpScreen(ModalScreen):
     """Help screen showing available commands."""
-    
+
     BINDINGS = [("escape,space,question_mark", "dismiss", "Close")]
 
     def compose(self) -> ComposeResult:
@@ -105,7 +105,7 @@ class HelpScreen(ModalScreen):
         container.styles.align = ("center", "middle")
         container.styles.height = "100%"
         container.styles.width = "100%"
-        
+
         self.styles.background = "rgba(0,0,0,0.5)"
         container.styles.background = "rgba(0,0,0,0.8)"
         container.styles.padding = (2, 4)
@@ -139,7 +139,7 @@ class CallBrowserApp(App):
                 self.call_table = DataTable(id="calls")
                 self.call_table.add_columns("Time", "Length", "Cost", "Summary")
                 self.call_table.styles.width = "50%"
-                
+
                 try:
                     for call in self.calls:
                         start = call.Start.strftime("%Y-%m-%d %H:%M")
@@ -171,7 +171,7 @@ class CallBrowserApp(App):
     def on_data_table_row_selected(self, event):
         try:
             call = next(c for c in self.calls if c.id == event.row_key.value)
-            
+
             details_text = f"""
 Start: {call.Start}
 End: {call.End}
@@ -183,7 +183,7 @@ Summary:
 {call.Summary}
 """
             self.details.update(details_text)
-            
+
             # Update transcript pane
             transcript_text = f"""Full Transcript for call {call.id}
 Time: {call.Start.strftime('%Y-%m-%d %H:%M')}
@@ -193,7 +193,7 @@ Cost: ${call.Cost:.2f}
 {call.Transcript}
 """
             self.transcript.update(transcript_text)
-            
+
         except Exception as e:
             logger.error(f"Error updating views: {e}")
             self.details.update(f"Error loading call details: {str(e)}")
@@ -204,7 +204,7 @@ Cost: ${call.Cost:.2f}
 
     def action_move_up(self):
         self.call_table.action_cursor_up()
-        
+
     def action_help(self):
         """Show help screen when ? is pressed."""
         self.push_screen(HelpScreen())
@@ -216,32 +216,32 @@ Cost: ${call.Cost:.2f}
         if selected_row is None:
             logger.warning("No row selected")
             return
-            
+
         try:
             call = self.calls[selected_row]
             call_id = call.id
-            
+
             headers = {
                 "authorization": f"{os.environ['VAPI_API_KEY']}",
             }
             response = httpx.get(f"https://api.vapi.ai/call/{call_id}", headers=headers)
             raw_call = response.json()
-            
+
             temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
             with temp_file as f:
                 json.dump(raw_call, f, indent=2, default=str)
                 temp_path = f.name
-                
+
             if os.name == 'nt':  # Windows
                 os.system(f'notepad {temp_path}')
             else:  # Unix
                 os.system(f'fx {temp_path}')
-            
+
             # Refresh all panes by re-selecting the current row
             self.refresh()
             if selected_row is not None:
                 self.call_table.select_row(selected_row)
-            
+
         except Exception as e:
             logger.error(f"Error opening JSON: {e}")
 
