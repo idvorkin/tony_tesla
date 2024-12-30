@@ -456,8 +456,8 @@ Transcript:
             if os.name == 'nt':  # Windows
                 os.system(f'notepad {temp_path}')
             else:  # Unix
-                editor = os.environ.get('EDITOR', 'fx')  # Changed default from vim to fx
-                os.system(f'{editor} {temp_path}')
+                # Directly use fx instead of checking EDITOR environment variable
+                os.system(f'fx {temp_path}')
                 
         except Exception as e:
             logger.error(f"Error opening JSON: {e}")
