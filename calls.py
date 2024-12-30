@@ -147,13 +147,14 @@ class SortScreen(ModalScreen):
     CSS = """
     Screen {
         align: center middle;
+        background: rgba(26, 27, 38, 0.85);
     }
 
     #sort-container {
         width: 60;
         height: auto;
-        background: $boost;
-        border: tall $background;
+        background: #24283b;
+        border: tall #414868;
         padding: 1;
     }
 
@@ -167,25 +168,34 @@ class SortScreen(ModalScreen):
     
     Button {
         width: 100%;
+        background: #1a1b26;
+        color: #c0caf5;
+        border: solid #414868;
+    }
+
+    Button:hover {
+        background: #364a82;
+        color: #7aa2f7;
     }
 
     Label {
         content-align: center middle;
         width: 100%;
         padding: 1;
+        color: #c0caf5;
     }
 
     #sort-label {
-        color: $secondary;
+        color: #7aa2f7;
         text-style: bold;
     }
 
     #reverse-label {
-        color: $text;
+        color: #e0af68;
     }
 
     #reverse-status {
-        color: $warning;
+        color: #9ece6a;
         text-style: bold;
     }
     """
@@ -264,19 +274,21 @@ class HelpScreen(ModalScreen):
     CSS = """
     Screen {
         align: center middle;
+        background: rgba(26, 27, 38, 0.85);
     }
 
     #help-container {
         width: 35;
-        background: $boost;
-        border: tall $background;
+        background: #24283b;
+        border: tall #414868;
         padding: 1;
     }
 
     #help-title {
         text-align: center;
         padding-bottom: 1;
-        color: $text;
+        color: #7aa2f7;
+        text-style: bold;
     }
 
     #help-content {
@@ -286,6 +298,11 @@ class HelpScreen(ModalScreen):
     .command {
         text-align: left;
         padding-left: 2;
+        color: #c0caf5;
+    }
+
+    .command:hover {
+        color: #7aa2f7;
     }
     """
 
@@ -314,14 +331,14 @@ class EditScreen(ModalScreen):
     CSS = """
     Screen {
         align: center middle;
-        background: $primary 30%;
+        background: rgba(26, 27, 38, 0.85);
     }
 
     #edit-container {
         width: 40;
         height: auto;
-        background: $boost;
-        border: tall $background;
+        background: #24283b;
+        border: tall #414868;
         padding: 1;
     }
 
@@ -335,16 +352,25 @@ class EditScreen(ModalScreen):
     Button {
         width: 100%;
         margin-bottom: 1;
+        background: #1a1b26;
+        color: #c0caf5;
+        border: solid #414868;
+    }
+
+    Button:hover {
+        background: #364a82;
+        color: #7aa2f7;
     }
 
     Label {
         content-align: center middle;
         width: 100%;
         padding: 1;
+        color: #c0caf5;
     }
 
     #edit-label {
-        color: $secondary;
+        color: #7aa2f7;
         text-style: bold;
     }
     """
@@ -432,15 +458,21 @@ class CallBrowserApp(App):
     ]
 
     CSS = """
+    Screen {
+        background: #1a1b26;
+    }
+
     #transcript-container {
         height: 50vh;
-        border: solid $background;
+        border: solid #414868;
+        background: #24283b;
         overflow-y: scroll;
         scrollbar-size: 1 1;
+        padding: 1;
     }
     
     #transcript-container:focus-within {
-        border: double $accent;
+        border: double #7aa2f7;
     }
     
     #transcript {
@@ -449,20 +481,40 @@ class CallBrowserApp(App):
     }
     
     #details {
-        border: solid $background;
+        border: solid #414868;
+        background: #24283b;
         overflow-y: scroll;
+        padding: 1;
     }
     
     #details:focus {
-        border: double $accent;
+        border: double #7aa2f7;
     }
     
     #calls {
-        border: solid $background;
+        border: solid #414868;
+        background: #24283b;
+        color: #c0caf5;
+        scrollbar-size: 1 1;
     }
     
     #calls:focus {
-        border: double $accent;
+        border: double #7aa2f7;
+    }
+
+    DataTable > .datatable--header {
+        background: #1a1b26;
+        color: #7aa2f7;
+        text-style: bold;
+    }
+
+    DataTable > .datatable--cursor {
+        background: #364a82;
+        color: #c0caf5;
+    }
+
+    DataTable > .datatable--hover {
+        background: #283457;
     }
     """
 
@@ -649,13 +701,13 @@ class CallBrowserApp(App):
             seconds = int(length_seconds % 60)
             length_str = f"{minutes}:{seconds:02d}"
             
-            details_text = f"""[bold cyan]Start:[/] {call.Start.strftime("%Y-%m-%d %H:%M")}
-[bold yellow]Length:[/] {length_str}
-[bold green]Cost:[/] ${call.Cost:.2f}
-[bold magenta]Caller:[/] {format_phone_number(call.Caller)}
+            details_text = f"""[#7aa2f7]Start:[/] {call.Start.strftime("%Y-%m-%d %H:%M")}
+[#e0af68]Length:[/] {length_str}
+[#9ece6a]Cost:[/] ${call.Cost:.2f}
+[#bb9af7]Caller:[/] {format_phone_number(call.Caller)}
 
 {call.Summary}"""
-            self.details.markup = True  # Enable markup parsing
+            self.details.markup = True
             self.details.update(details_text)
             
             # Colorize the transcript
@@ -664,15 +716,15 @@ class CallBrowserApp(App):
             for line in transcript_lines:
                 if line.strip().startswith('AI:') or line.strip().startswith('Tony:'):
                     prefix, rest = line.split(':', 1)
-                    colored_lines.append(f"[bright_cyan]{prefix}:[/][green]{rest}[/]")
+                    colored_lines.append(f"[#7aa2f7]{prefix}:[/][#9ece6a]{rest}[/]")
                 elif line.strip().startswith('User:') or line.strip().startswith('Igor:'):
                     prefix, rest = line.split(':', 1)
-                    colored_lines.append(f"[bright_yellow]{prefix}:[/][yellow]{rest}[/]")
+                    colored_lines.append(f"[#e0af68]{prefix}:[/][#f7768e]{rest}[/]")
                 else:
                     colored_lines.append(line)
             
             colored_transcript = '\n'.join(colored_lines)
-            self.transcript.markup = True  # Enable markup parsing
+            self.transcript.markup = True
             self.transcript.update(colored_transcript)
             
         except Exception as e:
