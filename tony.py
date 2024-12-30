@@ -280,10 +280,11 @@ from textual.screen import ModalScreen
 class HelpScreen(ModalScreen):
     """Help screen showing available commands."""
     
-    BINDINGS = [("escape,space,question_mark", "app.pop_screen", "Close")]
+    BINDINGS = [("escape,space,question_mark", "dismiss", "Close")]
 
     def compose(self) -> ComposeResult:
-        with Container():
+        # Create a semi-transparent overlay
+        with Container(classes="help-overlay"):
             yield Static(
                 """╔════════════════════════════╗
 ║      Available Commands     ║
@@ -305,11 +306,15 @@ class HelpScreen(ModalScreen):
         container.styles.align = ("center", "middle")
         container.styles.height = "100%"
         container.styles.width = "100%"
+        
+        # Add these styles to make the screen semi-transparent
+        self.styles.background = "rgba(0,0,0,0.5)"
+        container.styles.background = "rgba(0,0,0,0.8)"
+        container.styles.padding = (2, 4)
+        container.styles.border = ("solid", "white")
 
     def on_key(self, event):
-        # Only pop if we're not the last screen
-        if len(self.app._screen_stack) > 1:
-            self.app.pop_screen()
+        self.dismiss()
 
 class CallBrowserApp(App):
     BINDINGS = [
