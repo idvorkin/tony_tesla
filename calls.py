@@ -282,8 +282,8 @@ Cost: ${call.Cost:.2f}
     def action_sort(self):
         """Show sort column selection screen"""
         async def show_sort_screen() -> None:
-            # Get column names from the DataTable
-            columns = [col.label for col in self.call_table.columns]
+            # Get column names directly from the column keys
+            columns = [str(col) for col in self.call_table.columns.keys()]
             screen = SortScreen(columns)
             column_index = await self.push_screen_wait(screen)
             
