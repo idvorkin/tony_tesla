@@ -423,12 +423,12 @@ class CallBrowserApp(App):
         Binding("k,up", "move_up", "Up"),
         Binding("g,g", "move_top", "Top"),
         Binding("G", "move_bottom", "Bottom"),
-        Binding("tab", "focus_next", "Next Pane"),
-        Binding("shift+tab", "focus_previous", "Previous Pane"),
+        Binding("tab", "focus_next", "Next Widget"),
+        Binding("shift+tab", "focus_previous", "Previous Widget"),
         Binding("?", "help", "Help"),
         Binding("e", "edit_json", "Edit JSON"),
         Binding("s", "sort", "Sort"),
-        Binding("enter", "select_row", "Select"),
+        Binding("enter", "focus_next", "Next Widget"),
     ]
 
     CSS = """
@@ -520,9 +520,10 @@ class CallBrowserApp(App):
                 yield self.details
 
             # Bottom transcript pane
-            with ScrollableContainer(id="transcript-container"):
+            with ScrollableContainer(id="transcript-container") as container:
+                container.can_focus = True
                 self.transcript = Static("Select a call to view transcript", id="transcript")
-                self.transcript.can_focus = True
+                self.transcript.can_focus = False  # Only container should be focusable
                 yield self.transcript
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
@@ -533,13 +534,6 @@ class CallBrowserApp(App):
             self.current_call = self.calls[self.call_table.cursor_row]
             self._update_views_for_current_row()
 
-    def action_select_row(self):
-        """Handle enter key press to select row"""
-        ic("Select row action triggered")
-        ic("Current cursor row:", self.call_table.cursor_row)
-        if self.call_table.cursor_row is not None:
-            self.call_table.action_select_cursor()
-
     def action_move_down(self):
         """Move down in the focused pane"""
         if self.focused == self.call_table:
@@ -547,9 +541,9 @@ class CallBrowserApp(App):
             if self.call_table.cursor_row is not None:
                 self.call_table.action_select_cursor()
             self._update_views_for_current_row()
-        elif self.focused == self.transcript:
+        elif self.focused == self.query_one("#transcript-container"):
             container = self.query_one("#transcript-container")
-            container.scroll_down()
+            container.scroll_down(animate=False)
 
     def action_move_up(self):
         """Move up in the focused pane"""
@@ -558,9 +552,9 @@ class CallBrowserApp(App):
             if self.call_table.cursor_row is not None:
                 self.call_table.action_select_cursor()
             self._update_views_for_current_row()
-        elif self.focused == self.transcript:
+        elif self.focused == self.query_one("#transcript-container"):
             container = self.query_one("#transcript-container")
-            container.scroll_up()
+            container.scroll_up(animate=False)
 
     def action_help(self):
         """Show help screen when ? is pressed."""
@@ -693,9 +687,9 @@ class CallBrowserApp(App):
             self.call_table.move_cursor(row=0)
             self.call_table.action_select_cursor()
             self._update_views_for_current_row()
-        elif self.focused == self.transcript:
+        elif self.focused == self.query_one("#transcript-container"):
             container = self.query_one("#transcript-container")
-            container.scroll_home()
+            container.scroll_home(animate=False)
 
     def action_move_bottom(self):
         """Move to bottom of the focused pane"""
@@ -704,24 +698,39 @@ class CallBrowserApp(App):
             self.call_table.move_cursor(row=last_row)
             self.call_table.action_select_cursor()
             self._update_views_for_current_row()
-        elif self.focused == self.transcript:
+        elif self.focused == self.query_one("#transcript-container"):
             container = self.query_one("#transcript-container")
-            container.scroll_end()
-            container.scroll_end()
+            container.scroll_end(animate=False)
 
     def action_focus_next(self):
-        """Handle tab key to move focus between panes"""
+        """Handle tab key to move focus between widgets"""
         if self.focused == self.call_table:
-            self.set_focus(self.transcript)
+            container = self.query_one("#transcript-container")
+            self.set_focus(container)
+            # Select the current row when moving focus
+            if self.call_table.cursor_row is not None:
+                self.call_table.action_select_cursor()
+                self._update_views_for_current_row()
         else:
             self.set_focus(self.call_table)
 
     def action_focus_previous(self):
-        """Handle shift+tab to move focus between panes in reverse"""
+        """Handle shift+tab to move focus between widgets in reverse"""
         if self.focused == self.call_table:
-            self.set_focus(self.transcript)
+            container = self.query_one("#transcript-container")
+            self.set_focus(container)
+            # Select the current row when moving focus
+            if self.call_table.cursor_row is not None:
+                self.call_table.action_select_cursor()
+                self._update_views_for_current_row()
         else:
             self.set_focus(self.call_table)
+
+    def on_key(self, event) -> None:
+        """Handle raw key events before they are processed by widgets."""
+        if event.key == "enter":
+            event.prevent_default()  # Stop the key from being handled by the widget
+            self.action_focus_next()
 
 @app.command()
 def browse():

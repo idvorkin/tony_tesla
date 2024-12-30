@@ -80,7 +80,7 @@ def test_parse_call():
 
 @pytest.mark.asyncio
 async def test_pane_navigation(sample_call):
-    """Test navigation between panes"""
+    """Test navigation between widgets"""
     app = CallBrowserApp()
     app.calls = [sample_call]  # Use sample call for testing
     
@@ -90,19 +90,26 @@ async def test_pane_navigation(sample_call):
         
         # Test tab navigation
         await pilot.press("tab")
-        assert app.focused == app.transcript
+        await pilot.pause()
+        transcript_container = app.query_one("#transcript-container")
+        assert app.focused == transcript_container
+        
         await pilot.press("tab")
+        await pilot.pause()
         assert app.focused == app.call_table
         
         # Test reverse tab navigation
         await pilot.press("shift+tab")
-        assert app.focused == app.transcript
+        await pilot.pause()
+        assert app.focused == transcript_container
+        
         await pilot.press("shift+tab")
+        await pilot.pause()
         assert app.focused == app.call_table
 
 @pytest.mark.asyncio
 async def test_pane_scrolling(sample_call):
-    """Test scrolling behavior in different panes"""
+    """Test scrolling behavior in different widgets"""
     app = CallBrowserApp()
     app.calls = [sample_call]
     
@@ -114,8 +121,10 @@ async def test_pane_scrolling(sample_call):
         assert app.call_table.cursor_row == 0
         
         # Test transcript scrolling
-        await pilot.press("tab")  # Focus transcript directly
-        assert app.focused == app.transcript
+        await pilot.press("tab")  # Focus transcript container
+        await pilot.pause()
+        transcript_container = app.query_one("#transcript-container")
+        assert app.focused == transcript_container
         
         # Test scroll commands
         await pilot.press("g")  # Top
@@ -179,15 +188,16 @@ def test_parse_call_cost_formats():
 
 @pytest.mark.asyncio
 async def test_transcript_scrolling(long_transcript_call):
-    """Test scrolling behavior in transcript pane"""
+    """Test scrolling behavior in transcript widget"""
     app = CallBrowserApp()
     app.calls = [long_transcript_call]
     
     async with app.run_test() as pilot:
-        # Focus the transcript pane directly
+        # Focus the transcript container directly
         await pilot.press("tab")
+        await pilot.pause()
         container = app.query_one("#transcript-container")
-        assert app.focused == app.transcript
+        assert app.focused == container
         
         # Get initial scroll position
         initial_scroll_y = container.scroll_y
@@ -250,3 +260,32 @@ async def test_help_screen_dismiss():
         await pilot.pause()
         help_screen = app.query(HelpScreen)
         assert len(help_screen) == 0
+
+@pytest.mark.asyncio
+async def test_enter_key_navigation(sample_call):
+    """Test that Enter key behaves like Tab for widget focus navigation."""
+    app = CallBrowserApp()
+    app.calls = [sample_call]  # Use sample call for testing
+    
+    async with app.run_test() as pilot:
+        # Test initial focus
+        assert app.focused == app.call_table
+        
+        # Test enter navigation
+        await pilot.press("enter")
+        await pilot.pause()  # Add pause to allow focus change to complete
+        transcript_container = app.query_one("#transcript-container")
+        assert app.focused == transcript_container
+        
+        await pilot.press("enter")
+        await pilot.pause()  # Add pause to allow focus change to complete
+        assert app.focused == app.call_table
+        
+        # Verify it behaves the same as tab
+        await pilot.press("tab")
+        await pilot.pause()  # Add pause to allow focus change to complete
+        assert app.focused == transcript_container
+        
+        await pilot.press("tab")
+        await pilot.pause()  # Add pause to allow focus change to complete
+        assert app.focused == app.call_table
