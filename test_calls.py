@@ -1,8 +1,10 @@
 import pytest
 from datetime import datetime
 from dateutil import tz
-from calls import parse_call, format_phone_number, Call, CallBrowserApp, HelpScreen
+from calls import parse_call, format_phone_number, Call, CallBrowserApp, HelpScreen, EditScreen
 from textual.pilot import Pilot
+from textual.widgets import Label, Button
+import json
 
 @pytest.fixture
 def sample_call():
@@ -439,3 +441,294 @@ async def test_sort_updates_views():
         assert "Second call" in app.transcript.renderable
         assert "Second summary" in app.details.renderable
         assert app.call_table.cursor_row == 0
+
+@pytest.mark.asyncio
+async def test_secret_masking_toggle():
+    """Test that secret masking can be toggled on and off."""
+    app = CallBrowserApp()
+    # Create a sample call with a GUID and secret
+    sample_data = {
+        "id": "984bf60e-c2e9-4677-9122-868a4ce1e6ff",
+        "secret": "super-secret-value",
+        "analysis": {"summary": "Test summary"},
+        "artifact": {"transcript": "Test transcript"}
+    }
+    
+    edit_screen = EditScreen(sample_data)
+    
+    async with app.run_test() as pilot:
+        # Push the edit screen
+        app.push_screen(edit_screen)
+        await pilot.pause()
+        
+        # Check initial state
+        status_label = edit_screen.query_one("#mask-status", Label)
+        assert "Off" in status_label.renderable
+        assert not edit_screen.mask_secrets
+        
+        # Test toggle via keyboard
+        await pilot.press("m")
+        await pilot.pause()
+        assert "On" in status_label.renderable
+        assert edit_screen.mask_secrets
+        
+        # Test toggle again via keyboard
+        await pilot.press("m")
+        await pilot.pause()
+        assert "Off" in status_label.renderable
+        assert not edit_screen.mask_secrets
+
+@pytest.mark.asyncio
+async def test_guid_masking():
+    """Test that GUIDs are properly masked when secret masking is enabled."""
+    app = CallBrowserApp()
+    # Sample data with multiple GUIDs in different formats
+    sample_data = {
+        "id": "984bf60e-c2e9-4677-9122-868a4ce1e6ff",
+        "related_id": "ABCDEF12-C2E9-4677-9122-868A4CE1E6FF",  # Upper case
+        "another_id": "00000000-0000-0000-0000-000000000000",  # All zeros
+        "analysis": {"summary": "Test summary with guid: 984bf60e-c2e9-4677-9122-868a4ce1e6ff"},
+        "artifact": {"transcript": "Test transcript"}
+    }
+    
+    edit_screen = EditScreen(sample_data)
+    
+    async with app.run_test() as pilot:
+        app.push_screen(edit_screen)
+        await pilot.pause()
+        
+        # Enable masking
+        await pilot.press("m")
+        await pilot.pause()
+        
+        # Test masking in JSON content
+        masked_content = edit_screen._mask_content(json.dumps(sample_data, indent=2))
+        
+        # Verify all GUIDs are masked
+        assert "984bf60e-c2e9-4677-9122-868a4ce1e6ff" not in masked_content
+        assert "ABCDEF12-C2E9-4677-9122-868A4CE1E6FF" not in masked_content
+        assert "00000000-0000-0000-0000-000000000000" not in masked_content
+        
+        # Verify mask format
+        assert "xxx-xxx-xxx-xxx-xxx" in masked_content
+        
+        # Count occurrences of masked GUIDs
+        assert masked_content.count("xxx-xxx-xxx-xxx-xxx") == 4  # Should be 4 GUIDs total
+
+@pytest.mark.asyncio
+async def test_masking_persistence():
+    """Test that secret masking state persists across different view actions."""
+    app = CallBrowserApp()
+    sample_data = {
+        "id": "984bf60e-c2e9-4677-9122-868a4ce1e6ff",
+        "secret": "top-secret",
+        "analysis": {"summary": "Test summary with guid: 984bf60e-c2e9-4677-9122-868a4ce1e6ff"},
+        "artifact": {"transcript": "Test transcript with guid: 984bf60e-c2e9-4677-9122-868a4ce1e6ff"}
+    }
+    
+    edit_screen = EditScreen(sample_data)
+    
+    async with app.run_test() as pilot:
+        app.push_screen(edit_screen)
+        await pilot.pause()
+        
+        # Enable masking
+        await pilot.press("m")
+        await pilot.pause()
+        
+        # Test masking in different views
+        summary_content = edit_screen._mask_content(sample_data["analysis"]["summary"])
+        transcript_content = edit_screen._mask_content(sample_data["artifact"]["transcript"])
+        json_content = edit_screen._mask_content(json.dumps(sample_data))
+        
+        # Verify masking is consistent across all views
+        assert "984bf60e-c2e9-4677-9122-868a4ce1e6ff" not in summary_content
+        assert "984bf60e-c2e9-4677-9122-868a4ce1e6ff" not in transcript_content
+        assert "984bf60e-c2e9-4677-9122-868a4ce1e6ff" not in json_content
+        assert "top-secret" not in json_content
+        assert "secret-masked" in json_content
+        
+        assert "xxx-xxx-xxx-xxx-xxx" in summary_content
+        assert "xxx-xxx-xxx-xxx-xxx" in transcript_content
+        assert json_content.count("xxx-xxx-xxx-xxx-xxx") == 3  # Should be 3 GUIDs total
+
+@pytest.mark.asyncio
+async def test_secret_value_masking():
+    """Test that secret values are properly masked."""
+    app = CallBrowserApp()
+    # Sample data with secrets at different levels
+    sample_data = {
+        "id": "984bf60e-c2e9-4677-9122-868a4ce1e6ff",
+        "secret": "super-secret-value",
+        "nested": {
+            "secret": "nested-secret-value",
+            "normal": "normal-value"
+        },
+        "list_with_secrets": [
+            {"secret": "secret-in-list"},
+            {"normal": "normal-in-list"}
+        ],
+        "deep_nested": {
+            "level1": {
+                "level2": {
+                    "secret": "deep-secret-value"
+                }
+            }
+        }
+    }
+    
+    edit_screen = EditScreen(sample_data)
+    
+    async with app.run_test() as pilot:
+        app.push_screen(edit_screen)
+        await pilot.pause()
+        
+        # Enable masking
+        await pilot.press("m")
+        await pilot.pause()
+        
+        # Test masking in JSON content
+        masked_content = edit_screen._mask_content(json.dumps(sample_data, indent=2))
+        masked_data = json.loads(masked_content)
+        
+        # Verify all secrets are masked
+        assert masked_data["secret"] == "secret-masked"
+        assert masked_data["nested"]["secret"] == "secret-masked"
+        assert masked_data["list_with_secrets"][0]["secret"] == "secret-masked"
+        assert masked_data["deep_nested"]["level1"]["level2"]["secret"] == "secret-masked"
+        
+        # Verify non-secret values are unchanged
+        assert masked_data["nested"]["normal"] == "normal-value"
+        assert masked_data["list_with_secrets"][1]["normal"] == "normal-in-list"
+        
+        # Verify GUID is still masked
+        assert "984bf60e-c2e9-4677-9122-868a4ce1e6ff" not in masked_content
+        assert "xxx-xxx-xxx-xxx-xxx" in masked_content
+
+@pytest.mark.asyncio
+async def test_mixed_content_masking():
+    """Test that masking works on both JSON and non-JSON content."""
+    app = CallBrowserApp()
+    # Test with both JSON and plain text
+    json_data = {
+        "id": "984bf60e-c2e9-4677-9122-868a4ce1e6ff",
+        "secret": "secret-value"
+    }
+    plain_text = "GUID: 984bf60e-c2e9-4677-9122-868a4ce1e6ff and some text"
+    
+    edit_screen = EditScreen(json_data)
+    
+    async with app.run_test() as pilot:
+        app.push_screen(edit_screen)
+        await pilot.pause()
+        
+        # Enable masking
+        await pilot.press("m")
+        await pilot.pause()
+        
+        # Test JSON content
+        masked_json = edit_screen._mask_content(json.dumps(json_data))
+        masked_json_data = json.loads(masked_json)
+        assert masked_json_data["secret"] == "secret-masked"
+        assert "xxx-xxx-xxx-xxx-xxx" in masked_json
+        
+        # Test plain text content
+        masked_text = edit_screen._mask_content(plain_text)
+        assert "984bf60e-c2e9-4677-9122-868a4ce1e6ff" not in masked_text
+        assert "xxx-xxx-xxx-xxx-xxx" in masked_text
+
+@pytest.mark.asyncio
+async def test_id_field_masking():
+    """Test that fields ending in CallId or ProviderId are properly masked."""
+    app = CallBrowserApp()
+    # Sample data with various ID fields (using non-GUID format for IDs to test separately)
+    sample_data = {
+        "id": "regular-id",  # Regular id, should not be masked
+        "parentCallId": "abc-123-call-id",  # Should be masked
+        "voipProviderId": "provider-456",  # Should be masked
+        "normalField": "normal-value",  # Should not be masked
+        "nested": {
+            "customerCallId": "customer-789",  # Should be masked
+            "normal": "normal-value"
+        },
+        "list_with_ids": [
+            {"serviceCallId": "service-123"},  # Should be masked
+            {"normal": "normal-value"}
+        ],
+        "deep_nested": {
+            "level1": {
+                "level2": {
+                    "integrationProviderId": "integration-xyz"  # Should be masked
+                }
+            }
+        }
+    }
+    
+    edit_screen = EditScreen(sample_data)
+    
+    async with app.run_test() as pilot:
+        app.push_screen(edit_screen)
+        await pilot.pause()
+        
+        # Enable masking
+        await pilot.press("m")
+        await pilot.pause()
+        
+        # Test masking in JSON content
+        masked_content = edit_screen._mask_content(json.dumps(sample_data, indent=2))
+        masked_data = json.loads(masked_content)
+        
+        # Verify all CallId and ProviderId fields are masked
+        assert masked_data["parentCallId"] == "secret-masked"
+        assert masked_data["voipProviderId"] == "secret-masked"
+        assert masked_data["nested"]["customerCallId"] == "secret-masked"
+        assert masked_data["list_with_ids"][0]["serviceCallId"] == "secret-masked"
+        assert masked_data["deep_nested"]["level1"]["level2"]["integrationProviderId"] == "secret-masked"
+        
+        # Verify non-matching fields are unchanged
+        assert masked_data["id"] == "regular-id"  # Should not be masked as it's not a GUID or special ID
+        assert masked_data["normalField"] == "normal-value"
+        assert masked_data["nested"]["normal"] == "normal-value"
+        assert masked_data["list_with_ids"][1]["normal"] == "normal-value"
+
+@pytest.mark.asyncio
+async def test_combined_guid_and_id_masking():
+    """Test that both GUID and ID field masking work together."""
+    app = CallBrowserApp()
+    sample_data = {
+        "id": "984bf60e-c2e9-4677-9122-868a4ce1e6ff",  # Should be masked as GUID
+        "parentCallId": "abc-123-call-id",  # Should be masked as CallId
+        "voipProviderId": "provider-456",  # Should be masked as ProviderId
+        "normalField": "normal-value",  # Should not be masked
+        "guidField": "00000000-0000-0000-0000-000000000000",  # Should be masked as GUID
+        "nested": {
+            "customerCallId": "customer-789",  # Should be masked as CallId
+            "anotherGuid": "ABCDEF12-C2E9-4677-9122-868A4CE1E6FF"  # Should be masked as GUID
+        }
+    }
+    
+    edit_screen = EditScreen(sample_data)
+    
+    async with app.run_test() as pilot:
+        app.push_screen(edit_screen)
+        await pilot.pause()
+        
+        # Enable masking
+        await pilot.press("m")
+        await pilot.pause()
+        
+        # Test masking in JSON content
+        masked_content = edit_screen._mask_content(json.dumps(sample_data, indent=2))
+        masked_data = json.loads(masked_content)
+        
+        # Verify GUID masking
+        assert "xxx-xxx-xxx-xxx-xxx" in masked_content
+        assert masked_content.count("xxx-xxx-xxx-xxx-xxx") == 3  # Should be 3 GUIDs total
+        
+        # Verify ID field masking
+        assert masked_data["parentCallId"] == "secret-masked"
+        assert masked_data["voipProviderId"] == "secret-masked"
+        assert masked_data["nested"]["customerCallId"] == "secret-masked"
+        
+        # Verify non-matching fields are unchanged
+        assert masked_data["normalField"] == "normal-value"

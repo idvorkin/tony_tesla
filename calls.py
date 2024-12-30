@@ -308,6 +308,7 @@ class EditScreen(ModalScreen):
         ("s", "view_summary", "View Summary"),
         ("c", "view_conversation", "View Conversation"),
         ("v", "view_json", "View JSON in VI"),
+        ("m", "toggle_mask_secrets", "Toggle Secret Masking"),
     ]
 
     CSS = """
@@ -327,16 +328,23 @@ class EditScreen(ModalScreen):
     #edit-grid {
         layout: grid;
         grid-size: 1;
+        grid-rows: 5;
+        grid-gutter: 1;
         padding: 1;
         content-align: center middle;
+        height: auto;
+        min-height: 20;
     }
     
     Button {
         width: 100%;
+        height: 3;
         margin-bottom: 1;
         background: #1a1b26;
         color: #c0caf5;
         border: solid #414868;
+        content-align: center middle;
+        text-align: center;
     }
 
     Button:hover {
@@ -349,21 +357,65 @@ class EditScreen(ModalScreen):
         width: 100%;
         padding: 1;
         color: #c0caf5;
+        text-align: center;
     }
 
     #edit-label {
         color: #7aa2f7;
         text-style: bold;
     }
+
+    #mask-status {
+        color: #9ece6a;
+        text-style: bold;
+        margin-bottom: 1;
+    }
     """
     
     def __init__(self, call_data: dict):
         super().__init__()
         self.call_data = call_data
+        self.mask_secrets = False
+
+    def _mask_content(self, content: str) -> str:
+        """Replace GUIDs and secrets with masked values if masking is enabled."""
+        if not self.mask_secrets:
+            return content
+        
+        import re
+        # Pattern matches standard UUID format
+        guid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+        content = re.sub(guid_pattern, 'xxx-xxx-xxx-xxx-xxx', content, flags=re.IGNORECASE)
+        
+        # Mask secrets in JSON content
+        try:
+            # Only attempt JSON parsing if it looks like JSON
+            if '{' in content and '}' in content:
+                data = json.loads(content)
+                self._mask_secrets_recursive(data)
+                return json.dumps(data, indent=2, default=str)
+        except json.JSONDecodeError:
+            pass
+            
+        return content
+
+    def _mask_secrets_recursive(self, obj):
+        """Recursively mask any values where the key is 'secret' or ends with 'CallId' or 'ProviderId'."""
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if key.lower() == 'secret' or key.endswith('CallId') or key.endswith('ProviderId'):
+                    obj[key] = 'secret-masked'
+                elif isinstance(value, (dict, list)):
+                    self._mask_secrets_recursive(value)
+        elif isinstance(obj, list):
+            for item in obj:
+                if isinstance(item, (dict, list)):
+                    self._mask_secrets_recursive(item)
 
     def _write_temp_file(self, content: str, suffix: str = '.json') -> str:
         """Write content to a temporary file and return its path."""
         try:
+            content = self._mask_content(content)
             with tempfile.NamedTemporaryFile(mode='w', suffix=suffix, delete=False) as temp:
                 temp.write(content)
                 return temp.name
@@ -374,11 +426,19 @@ class EditScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         with Container(id="edit-container"):
             yield Label("View Options (press q to close):", id="edit-label")
+            yield Label("Secret Masking: Off", id="mask-status")
             with Grid(id="edit-grid"):
                 yield Button("[F]x View", id="fx", variant="primary")
                 yield Button("[S]ummary", id="summary")
                 yield Button("[C]onversation", id="conversation")
                 yield Button("[V]iew JSON", id="view_json")
+                yield Button("[M]ask Secrets", id="mask_secrets")
+
+    def action_toggle_mask_secrets(self):
+        """Toggle secret masking on/off."""
+        self.mask_secrets = not self.mask_secrets
+        status_label = self.query_one("#mask-status", Label)
+        status_label.update(f"Secret Masking: {'On' if self.mask_secrets else 'Off'}")
 
     def _run_external_command(self, command: str):
         """Run an external command with proper terminal handling."""
@@ -433,6 +493,8 @@ class EditScreen(ModalScreen):
             self.action_view_conversation()
         elif button_id == "view_json":
             self.action_view_json()
+        elif button_id == "mask_secrets":
+            self.action_toggle_mask_secrets()
 
 class TranscriptView(Static):
     """Handle transcript display and coloring"""
