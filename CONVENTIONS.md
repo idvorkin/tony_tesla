@@ -47,6 +47,21 @@ Return Type: OrderDetailsResponse (which may include nested models like ProductI
 When possible update the tests to reflect the new changes.
 Tests are in the test directory
 
+### Running Tests
+
+When running pytest, use auto mode with pytest-xdist to parallelize test execution:
+
+```bash
+pytest -n auto
+```
+
+This automatically detects the optimal number of CPU cores and distributes tests accordingly.
+
+For debugging specific tests, run without -n flag:
+```bash
+pytest test_specific.py -v
+```
+
 ### TUI Applications
 
 When creating TUI (Text User Interface) applications:
