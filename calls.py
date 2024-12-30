@@ -137,7 +137,7 @@ class SortScreen(ModalScreen):
     """Screen for sorting options."""
     
     BINDINGS = [
-        ("escape", "dismiss", "Close"),
+        ("escape,q", "dismiss", "Close"),
         ("t", "sort('time')", "Sort by Time"),
         ("l", "sort('length')", "Sort by Length"),
         ("c", "sort('cost')", "Sort by Cost"),
@@ -222,48 +222,25 @@ class SortScreen(ModalScreen):
 
     def action_sort(self, column: str):
         """Handle sort action for a column."""
-        # Get the parent app
         app = self.app
         if isinstance(app, CallBrowserApp):
-            # Sort the calls
-            reverse = not self.reverse_sort
-            if column == "time":
-                app.calls.sort(key=lambda x: x.Start, reverse=reverse)
-            elif column == "length":
-                app.calls.sort(key=lambda x: x.length_in_seconds(), reverse=reverse)
-            elif column == "cost":
-                app.calls.sort(key=lambda x: x.Cost, reverse=reverse)
-            
-            # Refresh the table
-            app.call_table.clear()
-            for call in app.calls:
-                start = call.Start.strftime("%Y-%m-%d %H:%M")
-                length = f"{call.length_in_seconds():.0f}s"
-                app.call_table.add_row(
-                    start,
-                    length,
-                    f"${call.Cost:.2f}",
-                    key=call.id
-                )
-            
-            # Update cursor and views
-            app.call_table.move_cursor(row=0)
-            app.call_table.action_select_cursor()
-            app._update_views_for_current_row()
+            # Convert button ID to column name
+            column_map = {
+                "time": "time",
+                "length": "length",
+                "cost": "cost"
+            }
+            app.sort_calls(column_map[column], not self.reverse_sort)
         
-        # Reset reverse sort status
+        # Reset reverse sort status and dismiss
         self.reverse_sort = False
         status_label = self.query_one("#reverse-status", Label)
         status_label.update("Sort: Descending")
-        
-        # Dismiss the modal
         self.dismiss()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press."""
-        button_id = event.button.id
-        if button_id in ["time", "length", "cost"]:
-            self.action_sort(button_id)
+        self.action_sort(event.button.id)
 
     def on_mount(self) -> None:
         """Reset state when screen is mounted."""
@@ -457,6 +434,103 @@ class EditScreen(ModalScreen):
         elif button_id == "view_json":
             self.action_view_json()
 
+class TranscriptView(Static):
+    """Handle transcript display and coloring"""
+    
+    def __init__(self):
+        super().__init__("Select a call to view transcript", id="transcript")
+        self.can_focus = False
+        self.markup = True
+
+    def update_transcript(self, transcript: str):
+        """Update and colorize the transcript"""
+        if not transcript.strip():
+            self.update("[#414868]<no transcript>[/]")
+            return
+
+        # Colorize the transcript
+        transcript_lines = transcript.split('\n')
+        colored_lines = []
+        for line in transcript_lines:
+            if line.strip().startswith('AI:') or line.strip().startswith('Tony:'):
+                prefix, rest = line.split(':', 1)
+                colored_lines.append(f"[#7aa2f7]{prefix}:[/][#9ece6a]{rest}[/]")
+            elif line.strip().startswith('User:') or line.strip().startswith('Igor:'):
+                prefix, rest = line.split(':', 1)
+                colored_lines.append(f"[#e0af68]{prefix}:[/][#f7768e]{rest}[/]")
+            else:
+                colored_lines.append(line)
+        
+        colored_transcript = '\n'.join(colored_lines)
+        self.update(colored_transcript)
+
+
+class CallDetailsView(Static):
+    """Handle call details display"""
+    
+    def __init__(self):
+        super().__init__("Select a call to view details", id="details")
+        self.styles.width = "50%"
+        self.can_focus = False
+        self.markup = True
+
+    def update_details(self, call: Call):
+        """Update the details view with call information"""
+        length_seconds = call.length_in_seconds()
+        minutes = int(length_seconds // 60)
+        seconds = int(length_seconds % 60)
+        length_str = f"{minutes}:{seconds:02d}"
+        
+        details_text = f"""[#7aa2f7]Start:[/] {call.Start.strftime("%Y-%m-%d %H:%M")}
+[#e0af68]Length:[/] {length_str}
+[#9ece6a]Cost:[/] ${call.Cost:.2f}
+[#bb9af7]Caller:[/] {format_phone_number(call.Caller)}
+
+{call.Summary}"""
+        self.update(details_text)
+
+
+class CallTable(DataTable):
+    """Handle call list display and sorting"""
+    
+    def __init__(self):
+        super().__init__(id="calls")
+        self.styles.width = "50%"
+        self.cursor_type = "row"
+        self.can_focus = True
+        
+        # Add columns
+        self.add_column("Time")
+        self.add_column("Length")
+        self.add_column("Cost")
+
+    def load_calls(self, calls: List[Call]):
+        """Load calls into the table"""
+        self.clear()
+        for call in calls:
+            start = call.Start.strftime("%Y-%m-%d %H:%M")
+            length_seconds = call.length_in_seconds()
+            minutes = int(length_seconds // 60)
+            seconds = int(length_seconds % 60)
+            length = f"{minutes}:{seconds:02d}"
+            self.add_row(
+                start,
+                length,
+                f"${call.Cost:.2f}",
+                key=call.id
+            )
+
+    def sort_calls(self, calls: List[Call], column: str, reverse: bool = False):
+        """Sort calls by the specified column"""
+        if column == "time":
+            calls.sort(key=lambda x: x.Start, reverse=reverse)
+        elif column == "length":
+            calls.sort(key=lambda x: x.length_in_seconds(), reverse=reverse)
+        elif column == "cost":
+            calls.sort(key=lambda x: x.Cost, reverse=reverse)
+        self.load_calls(calls)
+
+
 class CallBrowserApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
@@ -559,47 +633,20 @@ class CallBrowserApp(App):
         logger.info(f"Loaded {len(self.calls)} calls")
         self.current_call = None
 
-    def compose(self):
-        """Change layout to horizontal split with transcript below"""
+    def compose(self) -> ComposeResult:
+        """Create the UI layout"""
         with Container():
             with Horizontal(classes="top-container"):
-                self.call_table = DataTable(id="calls")
-                # Add columns with proper string labels
-                self.call_table.add_column("Time")
-                self.call_table.add_column("Length")
-                self.call_table.add_column("Cost")
-                self.call_table.styles.width = "50%"
-                self.call_table.cursor_type = "row"
-                self.call_table.can_focus = True
-
-                try:
-                    for call in self.calls:
-                        start = call.Start.strftime("%Y-%m-%d %H:%M")
-                        length_seconds = call.length_in_seconds()
-                        minutes = int(length_seconds // 60)
-                        seconds = int(length_seconds % 60)
-                        length = f"{minutes}:{seconds:02d}"
-                        self.call_table.add_row(
-                            start,
-                            length,
-                            f"${call.Cost:.2f}",
-                            key=call.id
-                        )
-                    logger.info(f"Added {self.call_table.row_count} rows to table")
-                except Exception as e:
-                    logger.error(f"Error adding calls to table: {e}")
+                self.call_table = CallTable()
+                self.call_table.load_calls(self.calls)
                 yield self.call_table
 
-                self.details = Static("Select a call to view details", id="details")
-                self.details.styles.width = "50%"
-                self.details.can_focus = False  # Details pane is not focusable
+                self.details = CallDetailsView()
                 yield self.details
 
-            # Bottom transcript pane
             with ScrollableContainer(id="transcript-container") as container:
                 container.can_focus = True
-                self.transcript = Static("Select a call to view transcript", id="transcript")
-                self.transcript.can_focus = False  # Only container should be focusable
+                self.transcript = TranscriptView()
                 yield self.transcript
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
@@ -636,53 +683,21 @@ class CallBrowserApp(App):
         """Show help screen when ? is pressed."""
         self.push_screen(HelpScreen())
 
-    def action_sort(self):
+    def sort_calls(self, column: str, reverse: bool = False):
+        """Sort calls and update the UI."""
+        logger.debug(f"Sorting by {column} (reverse={reverse})")
+        self.call_table.sort_calls(self.calls, column, reverse)
+        
+        # Update cursor and views
+        self.call_table.move_cursor(row=0)
+        self.call_table.action_select_cursor()
+        self._update_views_for_current_row()
+
+    async def action_sort(self):
         """Show sort column selection screen"""
-        async def show_sort_screen() -> None:
-            print("\nDEBUG: Starting sort screen")
-            print("Column keys:", self.call_table.columns.keys())
-            
-            try:
-                # Extract column names with debug info
-                columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
-                          for col in self.call_table.columns.keys()]
-                print("DEBUG: Extracted columns:", columns)
-            except Exception as e:
-                print(f"Error extracting columns: {e}")
-                raise
-                
-            screen = SortScreen()
-            print("DEBUG: Created sort screen")
-            
-            column_index = await self.push_screen_wait(screen)
-            print(f"DEBUG: Selected column index: {column_index}")
-            
-            if column_index is not None:  # None means user cancelled
-                # Sort the calls based on the selected column
-                column_name = columns[column_index]
-                
-                # Define sort key based on column
-                if column_name == "Time":
-                    self.calls.sort(key=lambda x: x.Start)
-                elif column_name == "Length":
-                    self.calls.sort(key=lambda x: x.length_in_seconds())
-                elif column_name == "Cost":
-                    self.calls.sort(key=lambda x: x.Cost)
-                
-                # Refresh the table
-                self.call_table.clear()
-                for call in self.calls:
-                    start = call.Start.strftime("%Y-%m-%d %H:%M")
-                    length = f"{call.length_in_seconds():.0f}s"
-                    self.call_table.add_row(
-                        start,
-                        length,
-                        f"${call.Cost:.2f}",
-                        key=call.id
-                    )
-
-        self.run_worker(show_sort_screen())
-
+        logger.debug("Opening sort screen")
+        screen = SortScreen()
+        await self.push_screen(screen)
 
     def action_edit_json(self):
         """Show edit options modal"""
@@ -719,43 +734,8 @@ class CallBrowserApp(App):
             call = self.calls[selected_row]
             ic("Found call:", call.id)
             
-            # Format length in MM:SS
-            length_seconds = call.length_in_seconds()
-            minutes = int(length_seconds // 60)
-            seconds = int(length_seconds % 60)
-            length_str = f"{minutes}:{seconds:02d}"
-            
-            details_text = f"""[#7aa2f7]Start:[/] {call.Start.strftime("%Y-%m-%d %H:%M")}
-[#e0af68]Length:[/] {length_str}
-[#9ece6a]Cost:[/] ${call.Cost:.2f}
-[#bb9af7]Caller:[/] {format_phone_number(call.Caller)}
-
-{call.Summary}"""
-            self.details.markup = True
-            self.details.update(details_text)
-            
-            # Handle empty transcript
-            if not call.Transcript.strip():
-                self.transcript.markup = True
-                self.transcript.update("[#414868]<no transcript>[/]")
-                return
-            
-            # Colorize the transcript
-            transcript_lines = call.Transcript.split('\n')
-            colored_lines = []
-            for line in transcript_lines:
-                if line.strip().startswith('AI:') or line.strip().startswith('Tony:'):
-                    prefix, rest = line.split(':', 1)
-                    colored_lines.append(f"[#7aa2f7]{prefix}:[/][#9ece6a]{rest}[/]")
-                elif line.strip().startswith('User:') or line.strip().startswith('Igor:'):
-                    prefix, rest = line.split(':', 1)
-                    colored_lines.append(f"[#e0af68]{prefix}:[/][#f7768e]{rest}[/]")
-                else:
-                    colored_lines.append(line)
-            
-            colored_transcript = '\n'.join(colored_lines)
-            self.transcript.markup = True
-            self.transcript.update(colored_transcript)
+            self.details.update_details(call)
+            self.transcript.update_transcript(call.Transcript)
             
         except Exception as e:
             logger.error(f"Error updating views: {e}")
