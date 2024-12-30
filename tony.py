@@ -271,16 +271,37 @@ def parse_calls(
     )
 
 
-from textual.app import App
-from textual.widgets import DataTable, Static
+from textual.app import App, ComposeResult
+from textual.widgets import DataTable, Static, Footer, Label
 from textual.containers import Horizontal
 from textual.binding import Binding
+from textual.screen import ModalScreen
+
+class HelpScreen(ModalScreen):
+    """Help screen showing available commands."""
+    
+    def compose(self) -> ComposeResult:
+        yield Label(
+            """Available Commands:
+            
+? - Show this help
+j - Move down
+k - Move up
+q - Quit application
+            
+Press any key to close help""",
+            id="help-text"
+        )
+
+    def on_key(self):
+        self.app.pop_screen()
 
 class CallBrowserApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("j", "move_down", "Down"),
         Binding("k", "move_up", "Up"),
+        Binding("?", "help", "Help"),
     ]
 
     def __init__(self):
@@ -352,6 +373,10 @@ Transcript:
 
     def action_move_up(self):
         self.call_table.action_cursor_up()
+        
+    def action_help(self):
+        """Show help screen when ? is pressed."""
+        self.push_screen(HelpScreen())
 
 @app.command()
 def browse():
