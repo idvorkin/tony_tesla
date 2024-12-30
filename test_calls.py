@@ -48,29 +48,27 @@ async def test_app_initial_state(app):
         # Check table exists and has correct columns
         table = app.query_one(DataTable)
 
-        # Add comprehensive widget debugging
-        print("\nDEBUG: App widget tree:")
-        print(app.query("*"))
-
-        print("\nDEBUG: DataTable properties:")
-        print(f"Table exists: {table is not None}")
-        print(f"Table class: {table.__class__.__name__}")
-        print(f"Table id: {table.id}")
-        print(f"Row count: {table.row_count}")
-        print(f"Column count: {len(table.columns)}")
+        # Debug widget tree and properties
+        ic("App widget tree", app.query("*"))
+        ic("DataTable properties",
+           "exists", table is not None,
+           "class", table.__class__.__name__,
+           "id", table.id,
+           "row_count", table.row_count,
+           "column_count", len(table.columns))
 
         # Debug column information
-        print("\nDEBUG: Column details:")
-        for i, col in enumerate(table.columns):
-            print(f"Column {i}:")
-            print(f"  Key: {col}")
-            print(f"  Type: {type(col)}")
-            print(f"  Dir: {dir(col)}")
-            print(f"  Str repr: {str(col)}")
+        ic("Testing column value access")
+        for col in table.columns:
+            ic(col, col.value, type(col))
+
+        # Debug available selection-related message types
+        ic("Available DataTable selection messages", 
+           [attr for attr in dir(DataTable) if 'select' in attr.lower()])
 
         # Extract and verify columns
-        columns = [str(col) for col in table.columns]
-        print("\nDEBUG: Extracted columns:", columns)
+        columns = [col.value for col in table.columns]
+        ic("Extracted columns", columns)
 
         assert columns == ["Time", "Length", "Cost", "Summary"]
 
@@ -108,12 +106,12 @@ async def test_help_screen(app):
 async def test_sort_screen(app):
     """Test sort screen shows and allows selection."""
     async with app.run_test() as pilot:
-        # Add debugging
-        print("\nDEBUG: Before pressing s")
+        # Debug sort screen navigation
+        ic("Before pressing s")
         await pilot.press("s")
-        print("DEBUG: After pressing s")
-        print("DEBUG: Current screen:", app.screen)
-        print("DEBUG: Screen type:", type(app.screen))
+        ic("After pressing s",
+           "Current screen", app.screen,
+           "Screen type", type(app.screen))
         assert isinstance(app.screen, SortScreen)
 
         # Press escape to cancel
@@ -133,7 +131,7 @@ async def test_call_selection(app):
         # Select the first row
         table.move_cursor(row=0)
         # Trigger the selection event explicitly
-        await table.post_message(DataTable.Selected(table.cursor_row, 0))
+        await table.post_message(DataTable.RowSelected(table.cursor_row, 0))
 
         # Allow time for update
         await pilot.pause()
