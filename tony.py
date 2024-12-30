@@ -273,7 +273,7 @@ def parse_calls(
 
 from textual.app import App, ComposeResult
 from textual.widgets import DataTable, Static, Footer, Label
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Center
 from textual.binding import Binding
 from textual.screen import ModalScreen
 
@@ -281,17 +281,20 @@ class HelpScreen(ModalScreen):
     """Help screen showing available commands."""
     
     def compose(self) -> ComposeResult:
-        yield Label(
-            """Available Commands:
-            
-? - Show this help
-j - Move down
-k - Move up
-q - Quit application
-            
-Press any key to close help""",
-            id="help-text"
-        )
+        with Center():
+            yield Static(
+                """╔════════════════════════════╗
+║      Available Commands     ║
+║                            ║
+║  ? - Show this help        ║
+║  j - Move down             ║
+║  k - Move up              ║
+║  q - Quit application     ║
+║                            ║
+║  Press any key to close    ║
+╚════════════════════════════╝""",
+                id="help-text"
+            )
 
     def on_key(self):
         self.app.pop_screen()
