@@ -282,9 +282,8 @@ Cost: ${call.Cost:.2f}
     def action_sort(self):
         """Show sort column selection screen"""
         async def show_sort_screen() -> None:
-            # Extract just the column names from the ColumnKey objects
-            columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
-                      for col in self.call_table.columns.keys()]
+            # Get column labels directly
+            columns = [col.label for col in self.call_table.columns.keys()]
             screen = SortScreen(columns)
             column_index = await self.push_screen_wait(screen)
             

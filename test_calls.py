@@ -46,8 +46,8 @@ async def test_app_initial_state(app):
     async with app.run_test() as pilot:
         # Check table exists and has correct columns
         table = app.query_one(DataTable)
-        # Extract just the column names from the ColumnKey objects
-        columns = [str(col).replace("ColumnKey('", "").replace("')", "") for col in table.columns.keys()]
+        # Get column labels directly
+        columns = [col.label for col in table.columns.keys()]
         assert columns == ["Time", "Length", "Cost", "Summary"]
         
         # Check initial details and transcript
@@ -107,8 +107,8 @@ async def test_call_selection(app):
         table.action_select_cursor()
         
         # Verify details and transcript updated
-        details_text = details.render()
-        transcript_text = transcript.render()
+        details_text = details.render().plain
+        transcript_text = transcript.render().plain
         
         assert "Test summary 1" in details_text
         assert "Test transcript 1" in transcript_text
