@@ -138,3 +138,95 @@ When creating TUI (Text User Interface) applications:
   def app_wrap_loguru():
       app()
   ```
+
+### Testing TUI Applications
+
+When testing Textual TUI applications:
+
+- Use pytest-asyncio and mark tests:
+  ```python
+  pytestmark = pytest.mark.asyncio
+  ```
+
+- Include standard test fixtures:
+  ```python
+  @pytest.fixture
+  async def app():
+      """Create test app instance."""
+      return MyTUIApp()
+  ```
+
+- Use app.run_test() context manager:
+  ```python
+  async def test_something(app):
+      async with app.run_test() as pilot:
+          # Test code here
+  ```
+
+- Add comprehensive debugging:
+  ```python
+  # Debug widget tree
+  print(f"DEBUG: App widgets: {app.query('*')}")
+  
+  # Debug specific components
+  table = app.query_one(DataTable)
+  print(f"Table properties: {table.columns}")
+  
+  # Debug events and state changes
+  print(f"Before action: {current_state}")
+  await pilot.press("key")
+  print(f"After action: {new_state}")
+  ```
+
+- Test widget queries and selections:
+  ```python
+  table = app.query_one(DataTable)
+  details = app.query_one("#details", Static)
+  ```
+
+- Allow time for UI updates:
+  ```python
+  await pilot.pause()
+  ```
+
+- Test modal screens:
+  ```python
+  await pilot.press("?")  # Open modal
+  assert isinstance(app.screen, HelpScreen)
+  await pilot.press("escape")  # Close modal
+  ```
+
+- Test DataTable operations:
+  - Extract column information:
+    ```python
+    columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
+              for col in table.columns.keys()]
+    ```
+  - Test row selection:
+    ```python
+    table.move_cursor(row=0)
+    table.action_select_cursor()
+    ```
+
+- Include error handling in tests:
+  ```python
+  try:
+      # Test code
+  except Exception as e:
+      print(f"DEBUG: Test failed with error: {e}")
+      print(f"App state: {app.query('*')}")
+      raise
+  ```
+
+- Test keyboard navigation:
+  ```python
+  await pilot.press("j")  # Down
+  await pilot.press("k")  # Up
+  await pilot.press("q")  # Quit
+  ```
+
+- Verify widget content:
+  ```python
+  content = widget.render()._renderable
+  assert "expected text" in str(content)
+  ```
