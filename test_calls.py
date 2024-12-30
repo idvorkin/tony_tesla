@@ -58,16 +58,19 @@ async def test_app_initial_state(app):
            "column_count", len(table.columns))
 
         # Debug column information
-        ic("Testing column value access")
+        ic("Column raw string representation")
         for col in table.columns:
-            ic(col, col.value, type(col))
+            ic("Raw str", str(col))
+            ic("Dir contents", dir(col))
+            ic("Repr", repr(col))
 
         # Debug available selection-related message types
         ic("Available DataTable selection messages", 
            [attr for attr in dir(DataTable) if 'select' in attr.lower()])
 
         # Extract and verify columns
-        columns = [col.value for col in table.columns]
+        columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
+                  for col in table.columns]
         ic("Extracted columns", columns)
 
         assert columns == ["Time", "Length", "Cost", "Summary"]
@@ -128,10 +131,16 @@ async def test_call_selection(app):
         ic(table)
         ic(transcript)
 
+        # Debug row selection
+        ic("Table row keys", [row.key for row in table.rows])
+        ic("Current cursor row", table.cursor_row)
+        ic("Row at cursor", table.get_row_at(table.cursor_row))
+
         # Select the first row
         table.move_cursor(row=0)
-        # Trigger the selection event explicitly
-        await table.post_message(DataTable.RowSelected(table.cursor_row, 0))
+        row = table.get_row_at(table.cursor_row)
+        # Trigger the selection event explicitly with row key
+        await table.post_message(DataTable.RowSelected(table.cursor_row, 0, row.key))
 
         # Allow time for update
         await pilot.pause()
