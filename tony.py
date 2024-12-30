@@ -292,6 +292,7 @@ class HelpScreen(ModalScreen):
 ║  ? - Show this help        ║
 ║  j - Move down             ║
 ║  k - Move up              ║
+║  e - Edit JSON details    ║
 ║  q - Quit application     ║
 ║                            ║
 ║  Press any key to close    ║
@@ -322,6 +323,7 @@ class CallBrowserApp(App):
         Binding("j", "move_down", "Down"),
         Binding("k", "move_up", "Up"),
         Binding("?", "help", "Help"),
+        Binding("e", "edit_json", "Edit JSON"),
     ]
 
     def __init__(self):
@@ -422,6 +424,43 @@ Transcript:
     def action_help(self):
         """Show help screen when ? is pressed."""
         self.push_screen(HelpScreen())
+
+    def action_edit_json(self):
+        """Open the current call's JSON in external editor"""
+        try:
+            # Get currently selected row
+            selected_row = self.call_table.cursor_row
+            if selected_row is None:
+                logger.warning("No row selected")
+                return
+                
+            # Get call ID from selected row
+            call_id = self.call_table.get_row_at(selected_row).key
+            
+            # Get the raw API response for this call
+            headers = {
+                "authorization": f"{os.environ['VAPI_API_KEY']}",
+            }
+            response = httpx.get(f"https://api.vapi.ai/call/{call_id}", headers=headers)
+            raw_call = response.json()
+            
+            # Write to temp file
+            import tempfile
+            import os
+            
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                json.dump(raw_call, f, indent=2, default=str)
+                temp_path = f.name
+                
+            # Open in system editor
+            if os.name == 'nt':  # Windows
+                os.system(f'notepad {temp_path}')
+            else:  # Unix
+                editor = os.environ.get('EDITOR', 'vim')
+                os.system(f'{editor} {temp_path}')
+                
+        except Exception as e:
+            logger.error(f"Error opening JSON: {e}")
 
 @app.command()
 def browse():
