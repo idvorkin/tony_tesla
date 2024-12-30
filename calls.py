@@ -149,8 +149,13 @@ class CallBrowserApp(App):
         Binding("k", "move_up", "Up"),
         Binding("?", "help", "Help"),
         Binding("e", "edit_json", "Edit JSON"),
-        Binding("enter", "show_transcript", "Show Transcript"),
+        Binding("return", "show_transcript", "Show Transcript"),
     ]
+
+    def on_mount(self) -> None:
+        """Called when app is mounted"""
+        logger.info(f"App mounted, bindings: {self.BINDINGS}")
+        super().on_mount()
 
     def __init__(self):
         super().__init__()
@@ -228,6 +233,7 @@ Transcript:
 
     def action_show_transcript(self):
         """Show full transcript in a modal when Enter is pressed"""
+        logger.info("Show transcript action triggered")
         selected_row = self.call_table.cursor_row
         if selected_row is None:
             return
