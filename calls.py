@@ -183,26 +183,10 @@ Transcript:
 {call.Transcript[:500]}...
 """
             self.details.update(details_text)
-
-            headers = {
-                "authorization": f"{os.environ['VAPI_API_KEY']}",
-            }
-            response = httpx.get(f"https://api.vapi.ai/call/{call.id}", headers=headers)
-            raw_call = response.json()
             
-            logger.info(f"Got raw call data: {len(str(raw_call))} bytes")
-            
-            json_text = "Call Details (JSON):\n\n" + json.dumps(raw_call, indent=2, default=str)
-            self.json_view.update(json_text)
-            
-            self.json_view.styles.background = "black"
-            self.json_view.styles.color = "white"
-            self.json_view.styles.padding = (1, 2)
-            
-            logger.info("Updated JSON view")
         except Exception as e:
             logger.error(f"Error updating views: {e}")
-            self.json_view.update(f"Error loading call details: {str(e)}")
+            self.details.update(f"Error loading call details: {str(e)}")
 
     def action_move_down(self):
         self.call_table.action_cursor_down()
@@ -224,13 +208,18 @@ Transcript:
             call_id = self.call_table.get_row_at(selected_row).key
             call = next(c for c in self.calls if c.id == call_id)
             
-            transcript_text = f"""Transcript for call {call.id}:
+            transcript_text = f"""Full Transcript for call {call.id}
+Time: {call.Start.strftime('%Y-%m-%d %H:%M')}
+Length: {call.length_in_seconds():.0f}s
+Cost: ${call.Cost:.2f}
 
 {call.Transcript}
 """
             self.transcript.update(transcript_text)
+            self.transcript.scroll_home()  # Scroll to top of transcript
         except Exception as e:
             logger.error(f"Error showing transcript: {e}")
+            self.transcript.update(f"Error loading transcript: {str(e)}")
 
     def action_edit_json(self):
         """Open the current call's JSON in external editor"""
