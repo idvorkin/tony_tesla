@@ -24,9 +24,10 @@ dependencies = [
     "requests",
     "python-dateutil",
     "pathlib",
-    "onebusaway",
+    "onebusaway", 
     "httpx",
-    "modal"
+    "modal",
+    "rich-cli-browser"
 ]
 
 [project.optional-dependencies]
