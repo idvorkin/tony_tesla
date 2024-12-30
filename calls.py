@@ -479,13 +479,17 @@ class CallBrowserApp(App):
         background: #1a1b26;
     }
 
+    .top-container {
+        height: 50vh;
+    }
+
     #transcript-container {
         height: 50vh;
         border: solid #414868;
         background: #24283b;
         overflow-y: scroll;
         scrollbar-size: 1 1;
-        padding: 1;
+        padding: 0;
     }
     
     #transcript-container:focus-within {
@@ -494,14 +498,16 @@ class CallBrowserApp(App):
     
     #transcript {
         width: 100%;
-        padding: 1;
+        padding: 0 1;
+        margin: 0;
     }
     
     #details {
         border: solid #414868;
         background: #24283b;
         overflow-y: scroll;
-        padding: 1;
+        padding: 0 1;
+        height: 100%;
     }
     
     #details:focus {
@@ -513,6 +519,7 @@ class CallBrowserApp(App):
         background: #24283b;
         color: #c0caf5;
         scrollbar-size: 1 1;
+        height: 100%;
     }
     
     #calls:focus {
