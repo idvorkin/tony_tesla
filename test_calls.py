@@ -68,8 +68,7 @@ async def test_app_initial_state(app):
             print(f"  Str repr: {str(col)}")
         
         # Extract and verify columns
-        columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
-                  for col in table.columns.keys()]
+        columns = [col.value for col in table.columns.keys()]
         print("\nDEBUG: Extracted columns:", columns)
         
         assert columns == ["Time", "Length", "Cost", "Summary"]
@@ -129,7 +128,8 @@ async def test_call_selection(app):
         
         # Select the first row
         table.move_cursor(row=0)
-        table.action_select_cursor()
+        # Trigger the selection event explicitly
+        await table.emit("select", DataTable.Selected(table.cursor_row, 0))
         
         # Allow time for update
         await pilot.pause()
