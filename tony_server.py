@@ -22,6 +22,16 @@ from icecream import ic
 # import asyncio
 from modal import App, Image, Mount, Secret, web_endpoint, asgi_app
 
+# Configure icecream to truncate long output
+def truncate_value(obj):
+    str_val = str(obj)
+    if len(str_val) > 1000:
+        return str_val[:1000] + "..."
+    return str_val
+
+ic.configureOutput(prefix='', outputFunction=print)
+ic.configureOutput(argToStringFunction=truncate_value)
+
 PPLX_API_KEY_NAME = "PPLX_API_KEY"
 TONY_API_KEY_NAME = "TONY_API_KEY"
 ONEBUSAWAY_API_KEY = "ONEBUSAWAY_API_KEY"
@@ -52,14 +62,7 @@ def make_call(name, input: Dict):
     return FunctionCall(id=id, name=name, args=input)
 
 def parse_tool_call(function_name, params: Dict) -> FunctionCall:
-    """Parse the call from VAPI or from the test tool. When from VAPI has the following shape
-
-    'toolCalls': [{'function': {'arguments': {'question': 'What is the rain in '
-                                                        'Spain?'},
-                              'name': 'search'},
-                 'id': 'toolu_01FDyjjUG1ig7hP9YQ6MQXhX',
-                 'type': 'function'}],
-    """
+    """Parse the call from VAPI or from the test tool."""
     message = params.get("message", "")
     if not message:
         ic(params)
@@ -144,7 +147,7 @@ def trusted_journal_read():
     return content
 
 def get_headers(request: Request):
-    ic(request.headers)
+    ic(dict(request.headers))
     return request.headers
 
 
