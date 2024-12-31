@@ -10,9 +10,9 @@ global-install: install
     pipxu install -f . --editable --python $(which python3.12)
 
 run-dev-server:
-    modal serve {{tony_server}}
+    modal serve {{tony_server}}::modal_app
 deploy:
-    modal deploy {{tony_server}}
+    modal deploy {{tony_server}}::modal_app
 
 test-assistant:
     http POST https://idvorkin--modal-tony-server-assistant.modal.run notused="the cat in the hat" \

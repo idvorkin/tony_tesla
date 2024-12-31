@@ -37,6 +37,8 @@ default_image = Image.debian_slim(python_version="3.12").pip_install(
 app = FastAPI()
 modal_app = App("modal-tony-server")
 
+fastapi_app = FastAPI()
+
 modal_storage = "modal_readonly"
 
 
@@ -165,13 +167,8 @@ def raise_if_not_authorized(headers: Dict):
 # x-vapi-secret header -
 
 
-@modal_app.function(
-    image=default_image,
-    secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
-)
-@web_endpoint(method="POST")
-def search(params: Dict, headers=Depends(get_headers)):
-    """question: the question"""
+def search_logic(params: Dict, headers: Dict):
+    """Core search logic used by both Modal and FastAPI endpoints"""
     raise_if_not_authorized(headers)
     call = parse_tool_call("search", params)
     url = "https://api.perplexity.ai/chat/completions"
@@ -200,6 +197,22 @@ def search(params: Dict, headers=Depends(get_headers)):
     vapi_response = make_vapi_response(call, search_answer)
     ic(vapi_response)
     return vapi_response
+
+
+@modal_app.function(
+    image=default_image,
+    secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
+)
+@web_endpoint(method="POST")
+def search(params: Dict, headers=Depends(get_headers)):
+    """Modal endpoint for search"""
+    return search_logic(params, headers)
+
+
+@fastapi_app.post("/search")
+async def search_endpoint(params: Dict, headers: Dict = Depends(get_headers)):
+    """FastAPI endpoint for testing"""
+    return search_logic(params, headers)
 
 
 @modal_app.function(
