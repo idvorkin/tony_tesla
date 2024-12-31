@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import Mock, patch
 import json
-from blog_server import BlogReader, read_blog_post, blog_handler, UrlInfo
+from blog_server import BlogReader, read_blog_post, UrlInfo, blog_handler_logic
+
 
 @pytest.fixture
 def mock_requests():
@@ -77,7 +78,7 @@ def test_blog_reader_get_url_info(mock_requests):
 
 @pytest.mark.parametrize("action,expected_content", [
     ("random_blog", {"title": "Test Title", "url": "https://idvork.in/test-url"}),
-    ("blog_info", [{"url": "https://idvork.in/test-url", "title": "Test Title"}]),
+    ("blog_info", {"url": "https://idvork.in/test-url", "title": "Test Title", "description": "Test Description", "markdown_path": "test.md"}),
     ("blog_post_from_path", {"content": "# Test Content", "markdown_path": "test.md"}),
     ("random_blog_url_only", {"title": "Test Title", "url": "https://idvork.in/test-url"})
 ])
@@ -93,7 +94,7 @@ def test_blog_handler_actions(mock_blog_reader, mock_requests, action, expected_
                 "id": "test-id",
                 "function": {
                     "name": action,
-                    "arguments": json.dumps({"markdown_path": "test.md"})
+                    "arguments": '{"markdown_path": "test.md"}'
                 }
             }]
         }
@@ -102,13 +103,16 @@ def test_blog_handler_actions(mock_blog_reader, mock_requests, action, expected_
     
     # Act
     with patch('blog_server.raise_if_not_authorized'):
-        result = blog_handler(params, headers)
+        result = blog_handler_logic(params, headers)
     
     # Assert
     assert isinstance(result, dict)
-    assert "result" in result
+    assert "results" in result
+    assert isinstance(result["results"], list)
+    assert len(result["results"]) > 0
+    result_str = result["results"][0]["result"]
     for key in expected_content:
-        assert key in str(result["result"])
+        assert key in result_str
 
 def test_blog_handler_unknown_action():
     # Arrange
@@ -118,7 +122,7 @@ def test_blog_handler_unknown_action():
                 "id": "test-id",
                 "function": {
                     "name": "unknown_action",
-                    "arguments": "{}"
+                    "arguments": '{}' 
                 }
             }]
         }
@@ -127,7 +131,7 @@ def test_blog_handler_unknown_action():
     
     # Act
     with patch('blog_server.raise_if_not_authorized'):
-        result = blog_handler(params, headers)
+        result = blog_handler_logic(params, headers)
     
     # Assert
-    assert "Unknown action" in result["result"]
+    assert "Unknown action" in result["results"][0]["result"]

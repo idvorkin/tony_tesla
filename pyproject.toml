@@ -55,7 +55,7 @@ testpaths = [
 ]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short -n auto"
+addopts = "-v --tb=short"
 timeout = 300  # 5 minutes timeout for tests
 filterwarnings = [
     "ignore::DeprecationWarning",

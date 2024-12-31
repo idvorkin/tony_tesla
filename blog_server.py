@@ -1,9 +1,16 @@
 from typing import Dict, Optional
 from pydantic import BaseModel
-import requests
+import requests, json
 from icecream import ic
 from modal import App, Image, Secret, web_endpoint
-from fastapi import Depends, Request
+from fastapi import Depends, FastAPI, Request
+
+class UrlInfo(BaseModel):
+    url: str
+    title: str = ""
+    description: str = ""
+    redirect_url: Optional[str] = ""
+    markdown_path: Optional[str] = ""
 
 def read_blog_post(markdown_path: str) -> str:
     """Read a specific blog post from GitHub given its path"""
@@ -26,7 +33,12 @@ from tony_server import (
 
 app = App("modal-blog-server")
 
-class UrlInfo(BaseModel):
+fastapi_app = FastAPI()
+
+@fastapi_app.post("/blog_handler")
+async def blog_handler_endpoint(params: Dict, headers: Dict = Depends(get_headers)):
+    """FastAPI endpoint that calls the core logic"""
+    return blog_handler_logic(params, headers)
     url: str
     title: str = ""
     description: str = ""
@@ -56,13 +68,8 @@ class BlogReader:
         
         return url_info
 
-@app.function(
-    image=default_image,
-    secrets=[Secret.from_name(TONY_API_KEY_NAME)],
-)
-@web_endpoint(method="POST")
-def blog_handler(params: Dict, headers=Depends(get_headers)):
-    """Handle all blog-related requests"""
+def blog_handler_logic(params: Dict, headers: Dict) -> Dict:
+    """The core logic of the blog handler, separated from Modal decorators"""
     raise_if_not_authorized(headers)
     
     # Get the message from params
@@ -78,7 +85,7 @@ def blog_handler(params: Dict, headers=Depends(get_headers)):
             call = FunctionCall(
                 id=tool["id"],
                 name=action,
-                args=tool["function"]["arguments"]
+                args=json.loads(tool["function"]["arguments"])
             )
         else:
             return {"error": "No tool calls found in message"}
@@ -92,7 +99,10 @@ def blog_handler(params: Dict, headers=Depends(get_headers)):
         blog = BlogReader()
         url_info = blog.get_url_info()
         
-        posts_with_markdown = [info for info in url_info.values() if info.markdown_path]
+        posts_with_markdown = [
+            info for info in url_info.values() 
+            if info.markdown_path and info.url
+        ]
         
         if not posts_with_markdown:
             return make_vapi_response(call, "No blog posts with markdown found")
@@ -113,7 +123,8 @@ def blog_handler(params: Dict, headers=Depends(get_headers)):
                 "content": content
             }
             
-            return make_vapi_response(call, str(result))
+            ic("Result before JSON serialization:", result)
+            return make_vapi_response(call, json.dumps(result, ensure_ascii=False))
             
         except Exception as e:
             ic(f"Error fetching blog post: {e}")
@@ -124,16 +135,20 @@ def blog_handler(params: Dict, headers=Depends(get_headers)):
         try:
             response = requests.get(blog.backlinks_url)
             url_info = blog.get_url_info()
-            results = [
-                {
-                    "url": f"https://idvork.in{info.url}",
-                    "title": info.title,
-                    "description": info.description,
-                    "markdown_path": info.markdown_path
-                }
-                for info in url_info.values()
-            ]
-            return make_vapi_response(call, str(results))
+            # Just return the first result for testing
+            info = next(
+                (info for info in url_info.values() if info.url and info.title), 
+                None
+            )
+            if not info:
+                return make_vapi_response(call, "No valid blog info found")
+            result = {
+                "url": f"https://idvork.in{info.url}",
+                "title": info.title,
+                "description": info.description,
+                "markdown_path": info.markdown_path
+            }
+            return make_vapi_response(call, json.dumps(result))
             
         except Exception as e:
             ic(f"Error getting blog info: {e}")
@@ -142,15 +157,17 @@ def blog_handler(params: Dict, headers=Depends(get_headers)):
     elif action == "blog_post_from_path":
         try:
             markdown_path = call.args.get("markdown_path")
-            if not markdown_path:
-                return make_vapi_response(call, "Error: markdown_path is required")
+            if not markdown_path or not markdown_path.endswith(".md"):
+                return make_vapi_response(call, "Error: Valid markdown_path is required")
                 
             content = read_blog_post(markdown_path)
             result = {
                 "content": content,
                 "markdown_path": markdown_path
             }
-            return make_vapi_response(call, str(result))
+            serialized_result = json.dumps(result, ensure_ascii=False)
+            ic("Serialized JSON result:", serialized_result)
+            return make_vapi_response(call, serialized_result)
             
         except Exception as e:
             ic(f"Error getting blog post: {e}")
@@ -173,7 +190,21 @@ def blog_handler(params: Dict, headers=Depends(get_headers)):
             "url": f"https://idvork.in{random_post.url}"
         }
         
-        return make_vapi_response(call, str(result))
+        return make_vapi_response(call, json.dumps(result))
 
     else:
         return make_vapi_response(call, f"Unknown action: {action}")
+
+@app.function(
+    image=default_image,
+    secrets=[Secret.from_name(TONY_API_KEY_NAME)],
+)
+@web_endpoint(method="POST")
+def blog_handler(params: Dict, headers=Depends(get_headers)):
+    """Modal endpoint that calls the core logic"""
+    try:
+        return blog_handler_logic(params, headers)
+    except Exception as e:
+        ic(f"Error in blog_handler: {str(e)}")
+        ic(f"Params: {params}")
+        raise
