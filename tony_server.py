@@ -16,7 +16,7 @@ import asyncio
 import azure.cosmos.cosmos_client as cosmos_client
 import pydantic
 import requests
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from icecream import ic
 
 # import asyncio
@@ -34,7 +34,8 @@ default_image = Image.debian_slim(python_version="3.12").pip_install(
 )
 
 
-app = App("modal-tony-server")
+app = FastAPI()
+modal_app = App("modal-tony-server")
 
 modal_storage = "modal_readonly"
 
@@ -66,7 +67,7 @@ async def warm_up_endpoints(secret: str):
         # Execute calls without waiting for response
         await asyncio.gather(*tasks, return_exceptions=True)
 
-@app.function(
+@modal_app.function(
     image=default_image.pip_install(["httpx"]),
     mounts=[Mount.from_local_dir(modal_storage, remote_path="/" + modal_storage)],
     secrets=[Secret.from_name(TONY_STORAGE_SERVER_API_KEY)],
