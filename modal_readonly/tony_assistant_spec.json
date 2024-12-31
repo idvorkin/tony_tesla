@@ -99,19 +99,16 @@
             "parameters": {
               "type": "object",
               "properties": {
-                "action": {
-                  "type": "string",
-                  "enum": ["blog_info"],
-                  "default": "blog_info"
+                "unused": {
+                  "type": "string"
                 }
-              },
-              "required": ["action"]
-            },
-            "description": "Get information about posts on Igor's blog including URLs, titles, and descriptions"
+              }
+            }
           },
+          "description": "Get information about posts on Igor's blog including URLs, titles, and descriptions",
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_handler",
+            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_info",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -122,19 +119,16 @@
             "parameters": {
               "type": "object",
               "properties": {
-                "action": {
-                  "type": "string",
-                  "enum": ["random_blog"],
-                  "default": "random_blog"
+                "unused": {
+                  "type": "string"
                 }
-              },
-              "required": ["action"]
-            },
-            "description": "Get the content of a random blog post from Igor's blog"
+              }
+            }
           },
+          "description": "Get the content of a random blog post from Igor's blog",
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_handler",
+            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/random_blog",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -145,23 +139,18 @@
             "parameters": {
               "type": "object",
               "properties": {
-                "action": {
-                  "type": "string",
-                  "enum": ["blog_post_from_path"],
-                  "default": "blog_post_from_path"
-                },
                 "markdown_path": {
                   "type": "string",
                   "description": "The path to the markdown file in the GitHub repository"
                 }
               },
-              "required": ["action", "markdown_path"]
-            },
-            "description": "Get the content of a specific blog post from Igor's blog using its markdown path"
+              "required": ["markdown_path"]
+            }
           },
+          "description": "Get the content of a specific blog post from Igor's blog using its markdown path",
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_handler",
+            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_post",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -172,19 +161,16 @@
             "parameters": {
               "type": "object",
               "properties": {
-                "action": {
-                  "type": "string",
-                  "enum": ["random_blog_url_only"],
-                  "default": "random_blog_url_only"
+                "unused": {
+                  "type": "string"
                 }
-              },
-              "required": ["action"]
-            },
-            "description": "Get just the URL of a random blog post from Igor's blog without its content"
+              }
+            }
           },
+          "description": "Get just the URL of a random blog post from Igor's blog without its content",
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_handler",
+            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/random_blog_url",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         }
