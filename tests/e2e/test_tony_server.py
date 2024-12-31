@@ -18,8 +18,12 @@ def make_request(url: str, params: Dict[str, Any], headers: Dict[str, str]) -> r
         ic("Response status:", response.status_code)
         ic("Response headers:", dict(response.headers))
 
-        result = response.json()
-        ic("Response JSON:", result)
+        try:
+            result = response.json()
+            ic("Response JSON:", result)
+        except json.JSONDecodeError:
+            ic("Failed to decode JSON. Response content:", response.content)
+            raise
 
         response.raise_for_status()
         return response
