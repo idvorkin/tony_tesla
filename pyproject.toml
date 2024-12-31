@@ -40,7 +40,7 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = ["tony", "storage", "bus"]
+py-modules = ["tony", "storage", "bus", "blog_server", "tony_server"]
 
 [project.scripts]
 storage = "storage:app"
