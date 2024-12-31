@@ -16,6 +16,7 @@
           "type": "function",
           "function": {
             "name": "library_arrivals",
+            "description": "Get bus arrivals at the library which takes Igor to Garfield",
             "parameters": {
               "type": "object",
               "properties": {
@@ -23,8 +24,7 @@
                   "type": "string"
                 }
               }
-            },
-            "description": "Get bus arrivals at the library which takes Igor to Garfield"
+            }
           },
           "async": false,
           "server": {
@@ -36,6 +36,7 @@
           "type": "function",
           "function": {
             "name": "journal_read",
+            "description": "Read the users journal",
             "parameters": {
               "type": "object",
               "properties": {
@@ -43,8 +44,7 @@
                   "type": "string"
                 }
               }
-            },
-            "description": "Read the users journal"
+            }
           },
           "async": false,
           "server": {
@@ -56,6 +56,7 @@
           "type": "function",
           "function": {
             "name": "journal_append",
+            "description": "Append an entry to the users journal",
             "parameters": {
               "type": "object",
               "properties": {
@@ -63,8 +64,7 @@
                   "type": "string"
                 }
               }
-            },
-            "description": "Append an entry to the users journal"
+            }
           },
           "async": true,
           "server": {
@@ -76,6 +76,7 @@
           "type": "function",
           "function": {
             "name": "search",
+            "description": "Search the internet",
             "parameters": {
               "type": "object",
               "properties": {
@@ -83,8 +84,7 @@
                   "type": "string"
                 }
               }
-            },
-            "description": "Search the internet"
+            }
           },
           "async": false,
           "server": {
@@ -93,9 +93,10 @@
           }
         },
         {
-          "type": "function", 
+          "type": "function",
           "function": {
             "name": "blog_info",
+            "description": "Get information about posts on Igor's blog including URLs, titles, and descriptions",
             "parameters": {
               "type": "object",
               "properties": {
@@ -105,7 +106,6 @@
               }
             }
           },
-          "description": "Get information about posts on Igor's blog including URLs, titles, and descriptions",
           "async": false,
           "server": {
             "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_info",
@@ -115,7 +115,8 @@
         {
           "type": "function",
           "function": {
-            "name": "random_blog", 
+            "name": "random_blog",
+            "description": "Get the content of a random blog post from Igor's blog",
             "parameters": {
               "type": "object",
               "properties": {
@@ -125,7 +126,6 @@
               }
             }
           },
-          "description": "Get the content of a random blog post from Igor's blog",
           "async": false,
           "server": {
             "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/random_blog",
@@ -136,6 +136,7 @@
           "type": "function",
           "function": {
             "name": "blog_post_from_path",
+            "description": "Get the content of a specific blog post from Igor's blog using its markdown path",
             "parameters": {
               "type": "object",
               "properties": {
@@ -147,7 +148,6 @@
               "required": ["markdown_path"]
             }
           },
-          "description": "Get the content of a specific blog post from Igor's blog using its markdown path",
           "async": false,
           "server": {
             "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_post",
@@ -158,6 +158,7 @@
           "type": "function",
           "function": {
             "name": "random_blog_url_only",
+            "description": "Get just the URL of a random blog post from Igor's blog without its content",
             "parameters": {
               "type": "object",
               "properties": {
@@ -167,7 +168,6 @@
               }
             }
           },
-          "description": "Get just the URL of a random blog post from Igor's blog without its content",
           "async": false,
           "server": {
             "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/random_blog_url",

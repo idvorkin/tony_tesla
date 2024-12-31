@@ -25,8 +25,8 @@ from modal import App, Image, Mount, Secret, web_endpoint, asgi_app
 # Configure icecream to truncate long output
 def truncate_value(obj):
     str_val = str(obj)
-    if len(str_val) > 1000:
-        return str_val[:1000] + "..."
+    if len(str_val) > 2000:
+        return str_val[:2000] + "..."
     return str_val
 
 ic.configureOutput(prefix='', outputFunction=print)
