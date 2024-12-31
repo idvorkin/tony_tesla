@@ -140,7 +140,6 @@ def trusted_journal_read():
     for i in items:
         first = i
         break
-    ic(first)
     content = first["content"]
     return content
 
@@ -154,20 +153,20 @@ async def warm_up_endpoints(secret: str):
     async with httpx.AsyncClient() as client:
         base_url = "https://idvorkin--modal-tony-server"
         headers = {"x-vapi-secret": secret}
-        
+
         # Prepare warm-up calls
         tasks = [
-            client.post(f"{base_url}-search.modal.run", 
-                       json={"question": "warm up"}, 
+            client.post(f"{base_url}-search.modal.run",
+                       json={"question": "warm up"},
                        headers=headers),
-            client.post(f"{base_url}-library-arrivals.modal.run", 
-                       json={}, 
+            client.post(f"{base_url}-library-arrivals.modal.run",
+                       json={},
                        headers=headers),
             client.post("https://idvorkin--modal-blog-server-blog-handler.modal.run",
                        json={"action": "blog_info"},
                        headers=headers)
         ]
-        
+
         # Execute calls without waiting for response
         await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -191,7 +190,6 @@ async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
 </CurrentState>
     """
     tony_prompt += extra_state
-    ic(extra_state)
     # update system prompt
     tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
 
