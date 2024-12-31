@@ -49,8 +49,7 @@ def test_assistant_e2e(auth_headers, base_params):
     response = make_request(TONY_SERVER_URL, base_params, auth_headers)
     result = response.json()
 
-    assert "results" in result, "Expected 'results' key in response, but it was not found."
-    assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
-    result_str = result["results"][0]["result"]
-    result_dict = json.loads(result_str)
-    assert isinstance(result_dict, dict), "Result is not a valid JSON object"
+    assert "assistant" in result, "Expected 'assistant' key in response, but it was not found."
+    assert isinstance(result["assistant"], dict), "Expected 'assistant' to be a dictionary."
+    assert "firstMessage" in result["assistant"], "Expected 'firstMessage' in assistant response."
+    assert isinstance(result["assistant"]["firstMessage"], str), "Expected 'firstMessage' to be a string."
