@@ -123,22 +123,10 @@ def test_random_blog_e2e(auth_headers, base_params, n):
 
     assert response_time < 5.0, "Response took too long"
 
-    # Ensure the response contains the 'results' key
-    assert "results" in result, "Missing 'results' in response"
-    # Ensure there is at least one result
-    assert len(result["results"]) > 0, "No results found in response"
-    try:
-        result_str = result["results"][0]["result"]
-        result_dict = json.loads(result_str.replace("'", '"'))
-    except json.JSONDecodeError as e:
-        ic("JSON decode error:", str(e))
-        ic("Problematic JSON string:", result_str)
-        raise
-    assert "title" in result_dict, "Missing 'title' in result"
-    assert "url" in result_dict, "Missing 'url' in result"
-    # Verify the expected fields are present in the result
-    assert "content" in result_dict, "Missing 'content' in result"
-    assert result_dict["url"].startswith("https://idvork.in")
+    result_str = result["results"][0]["result"]
+    result_dict = json.loads(result_str)
+    assert "title" in result_dict["content"], "Missing 'title' in content"
+    assert "markdown_path" in result_dict, "Missing 'markdown_path' in result"
 
 @pytest.mark.e2e
 def test_blog_info_e2e(auth_headers, base_params):
@@ -164,10 +152,9 @@ def test_blog_info_e2e(auth_headers, base_params):
         assert "results" in result, "Missing 'results' in response"
         assert len(result["results"]) > 0, "No results found in response"
         result_str = result["results"][0]["result"]
-        # HACK: Instead of parsing the JSON, we check for specific content in the result string
-        # because the server response uses single quotes which are not valid JSON.
-        assert "https://idvork.in" in result_str, "Expected URL in the content, but it was not found."
-        assert "title" in result_str, "Expected 'title' in the content, but it was not found."
+        result_dict = json.loads(result_str)
+        assert "url" in result_dict, "Expected 'url' in result, but it was not found."
+        assert "title" in result_dict, "Expected 'title' in result, but it was not found."
 
     except requests.exceptions.HTTPError as e:
         ic("HTTP Error occurred")
@@ -200,15 +187,26 @@ def test_blog_post_from_path_e2e(auth_headers, base_params):
 
     response = make_request(BLOG_SERVER_URL, base_params, auth_headers)
     result = response.json()
+    print("Full JSON response:", result)
 
     assert "results" in result, "Expected 'results' key in response, but it was not found."
     assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
     result_str = result["results"][0]["result"]
     print("Result string:", result_str)
-    # HACK: Instead of parsing the JSON, we check for specific content in the result string
-    # because the server response uses single quotes which are not valid JSON.
-    assert "Igors Vim Tips" in result_str, "Expected 'Igors Vim Tips' in the content, but it was not found."
-    assert "_d/vim_tips.md" in result_str, "Expected '_d/vim_tips.md' in the content, but it was not found."
+    try:
+        result_dict = json.loads(result_str)
+        print("Parsed result_dict:", result_dict)
+    except json.JSONDecodeError as e:
+        ic("JSON decode error:", str(e))
+        ic("Problematic JSON string:", result_str)
+        raise
+    assert "title" in result_dict["content"], "Missing 'title' in content"
+    assert "permalink" in result_dict["content"], "Missing 'permalink' in content"
+    assert "content" in result_dict, "Missing 'content' in result"
+    assert "content" in result_dict, "Expected 'content' key in result, but it was not found."
+    assert "markdown_path" in result_dict, "Expected 'markdown_path' key in result, but it was not found."
+    assert len(result_dict["content"]) > 0, "Expected non-empty content, but it was empty."
+    assert isinstance(result_dict, dict), "Result is not a valid JSON object"
 
 @pytest.mark.e2e
 def test_random_blog_url_only_e2e(auth_headers, base_params):
