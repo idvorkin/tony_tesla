@@ -17,7 +17,7 @@ def clip_long_strings(output):
 ic.configureOutput(outputFunction=clip_long_strings)
 from urllib3.util.retry import Retry
 
-BLOG_SERVER_URL = "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_handler"
+BLOG_SERVER_BASE = "https://idvorkin--modal-blog-server-fastapi-app.modal.run"
 
 def create_session() -> requests.Session:
     """Create a session with retry logic"""
@@ -42,8 +42,13 @@ def make_request(url: str, params: Dict[str, Any], headers: Dict[str, str]) -> r
         ic("Response status:", response.status_code)
         ic("Response headers:", dict(response.headers))
 
-        result = response.json()
-        ic("Response JSON:", result)
+        # Try to parse JSON response, but handle cases where response might not be JSON
+        try:
+            result = response.json()
+            ic("Response JSON:", result)
+        except json.JSONDecodeError:
+            ic("Response was not JSON:", response.text[:1000])  # Show first 1000 chars
+            raise
 
         response.raise_for_status()
         return response
@@ -56,169 +61,127 @@ def make_request(url: str, params: Dict[str, Any], headers: Dict[str, str]) -> r
 @pytest.fixture
 def auth_headers():
     """Fixture to provide authentication headers"""
-    return {"x-vapi-secret": os.environ["TONY_API_KEY"]}
+    api_key = os.environ.get("TONY_API_KEY")
+    if not api_key:
+        pytest.skip("TONY_API_KEY environment variable not set")
+    return {"x-vapi-secret": api_key}
 
 @pytest.fixture
 def base_params():
     """Fixture for base parameters structure"""
     return {
-        "action": ""  # To be filled by individual tests
+        "message": {
+            "toolCalls": [{
+                "function": {
+                    "name": "",  # To be filled by individual tests
+                    "arguments": {}
+                },
+                "id": "test-id",
+                "type": "function"
+            }]
+        }
     }
 
 @pytest.mark.e2e
-def test_sanity_prints():
-    """Sanity test to print to stdout and stderr"""
-    print("This is a stdout message")
-    import sys
-    print("This is a stderr message", file=sys.stderr)
-@pytest.mark.parametrize("n", ["auto"])
-def test_random_blog_e2e(auth_headers, base_params, n):
+def test_random_blog_e2e(auth_headers, base_params):
     """Test getting a random blog post with real HTTP requests"""
     ic("Starting random blog test")
-    base_params["action"] = "random_blog"
+    base_params["message"]["toolCalls"][0]["function"]["name"] = "random_blog"
 
     start_time = time.time()
     try:
-        ic("Sending request with params:", base_params)
-        ic("Headers:", auth_headers)
-        response = make_request(BLOG_SERVER_URL, base_params, auth_headers)
+        response = make_request(f"{BLOG_SERVER_BASE}/random_blog", base_params, auth_headers)
         response_time = time.time() - start_time
-        ic(f"Response time: {response_time:.2f} seconds")
-        ic("Status code:", response.status_code)
-        ic("Response headers:", dict(response.headers))
+        
+        result = response.json()
+        assert isinstance(result, dict), f"Expected dict response, got {type(result)}"
+        assert response_time < 5.0, "Response took too long"
 
-        # Try to get JSON response even if status code is error
-        try:
-            result = response.json()
-            ic("Response JSON:", result)
-        except json.JSONDecodeError:
-            ic("Raw response content:", response.content)
-
-        response.raise_for_status()
-
-        if not isinstance(result, dict):
-            raise ValueError(f"Expected dict response, got {type(result)}")
-
+        result_str = result["results"][0]["result"]
+        result_dict = json.loads(result_str)
+        assert "content" in result_dict, "Missing 'content' in result"
+        assert "title" in result_dict, "Missing 'title' in result"
+        assert "markdown_path" in result_dict, "Missing 'markdown_path' in result"
+        assert "url" in result_dict, "Missing 'url' in result"
+        assert result_dict["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
+        assert len(result_dict["content"]) > 0, "Content should not be empty"
+        
         return result
 
-    except requests.exceptions.HTTPError as e:
-        ic("HTTP Error occurred")
-        ic("Request URL:", response.url)
-        ic("Request method:", response.request.method)
-        ic("Request headers:", dict(response.request.headers))
-        ic("Request body:", response.request.body)
-        ic("Response status:", response.status_code)
-        ic("Response content:", response.content)
-        ic("Error:", str(e))
-        raise
-    except json.JSONDecodeError as e:
-        ic("JSON decode error")
-        ic("Raw content:", response.content)
-        ic("Error:", str(e))
-        raise
     except Exception as e:
-        ic("Unexpected error:", str(e))
-        ic("Response content:", response.content)
+        ic("Error in test:", str(e))
         raise
-
-    assert response_time < 5.0, "Response took too long"
-
-    result_str = result["results"][0]["result"]
-    result_dict = json.loads(result_str)
-    assert "title" in result_dict["content"], "Missing 'title' in content"
-    assert "markdown_path" in result_dict, "Missing 'markdown_path' in result"
 
 @pytest.mark.e2e
 def test_blog_info_e2e(auth_headers, base_params):
     """Test getting blog info with real HTTP requests"""
     ic("Starting blog info test")
-    base_params["action"] = "blog_info"
+    base_params["message"]["toolCalls"][0]["function"]["name"] = "blog_info"
 
     try:
-        ic("Sending request with params:", base_params)
-        response = requests.post(BLOG_SERVER_URL, json=base_params, headers=auth_headers)
-        ic("Status code:", response.status_code)
-        ic("Response headers:", dict(response.headers))
-
-        try:
-            result = response.json()
-            ic("Response JSON:", result)
-        except json.JSONDecodeError:
-            ic("Raw response content:", response.content)
-            raise
-
-        response.raise_for_status()
+        response = make_request(f"{BLOG_SERVER_BASE}/blog_info", base_params, auth_headers)
+        result = response.json()
 
         assert "results" in result, "Missing 'results' in response"
         assert len(result["results"]) > 0, "No results found in response"
         result_str = result["results"][0]["result"]
         result_dict = json.loads(result_str)
-        assert "url" in result_dict, "Expected 'url' in result, but it was not found."
-        assert "title" in result_dict, "Expected 'title' in result, but it was not found."
+        assert "url" in result_dict, "Missing 'url' in result"
+        assert "title" in result_dict, "Missing 'title' in result"
+        assert "description" in result_dict, "Missing 'description' in result"
+        assert "markdown_path" in result_dict, "Missing 'markdown_path' in result"
+        assert result_dict["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
+        assert len(result_dict["title"]) > 0, "Title should not be empty"
 
-    except requests.exceptions.HTTPError as e:
-        ic("HTTP Error occurred")
-        ic("Request URL:", response.url)
-        ic("Request method:", response.request.method)
-        ic("Request headers:", dict(response.request.headers))
-        ic("Request body:", response.request.body)
-        ic("Response status:", response.status_code)
-        ic("Response content:", response.content)
-        ic("Error:", str(e))
-        raise
     except Exception as e:
-        ic("Unexpected error:", str(e))
-        ic("Response content:", response.content)
+        ic("Error in test:", str(e))
         raise
 
 @pytest.mark.e2e
-def test_blog_post_from_path_e2e(auth_headers, base_params):
-    """Test getting a specific blog post with real HTTP requests
-
-    This test verifies that the blog server can return a specific blog post
-    when provided with a valid markdown path. It checks that the response
-    contains the expected fields and that the content is not empty.
-    """
-    base_params.update({
-        "action": "blog_post_from_path",
-        "markdown_path": "_d/vim_tips.md"
+def test_blog_post_e2e(auth_headers, base_params):
+    """Test getting a specific blog post with real HTTP requests"""
+    base_params["message"]["toolCalls"][0]["function"].update({
+        "name": "blog_post_from_path",
+        "arguments": {"markdown_path": "_d/vim_tips.md"}
     })
-    ic("Running test_blog_post_from_path_e2e")
 
-    response = make_request(BLOG_SERVER_URL, base_params, auth_headers)
-    result = response.json()
-    print("Full JSON response:", result)
-
-    assert "results" in result, "Expected 'results' key in response, but it was not found."
-    assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
-    result_str = result["results"][0]["result"]
-    print("Result string:", result_str)
     try:
+        response = make_request(f"{BLOG_SERVER_BASE}/blog_post", base_params, auth_headers)
+        result = response.json()
+
+        assert "results" in result, "Missing 'results' in response"
+        assert len(result["results"]) > 0, "No results found in response"
+        result_str = result["results"][0]["result"]
         result_dict = json.loads(result_str)
-        print("Parsed result_dict:", result_dict)
-    except json.JSONDecodeError as e:
-        ic("JSON decode error:", str(e))
-        ic("Problematic JSON string:", result_str)
+        
+        assert "content" in result_dict, "Missing 'content' in result"
+        assert "markdown_path" in result_dict, "Missing 'markdown_path' in result"
+        assert len(result_dict["content"]) > 0, "Content should not be empty"
+        assert result_dict["markdown_path"] == "_d/vim_tips.md", "Incorrect markdown path"
+        assert isinstance(result_dict, dict), "Result should be a valid JSON object"
+
+    except Exception as e:
+        ic("Error in test:", str(e))
         raise
-    assert "title" in result_dict["content"], "Missing 'title' in content"
-    assert "permalink" in result_dict["content"], "Missing 'permalink' in content"
-    assert "content" in result_dict, "Missing 'content' in result"
-    assert "content" in result_dict, "Expected 'content' key in result, but it was not found."
-    assert "markdown_path" in result_dict, "Expected 'markdown_path' key in result, but it was not found."
-    assert len(result_dict["content"]) > 0, "Expected non-empty content, but it was empty."
-    assert isinstance(result_dict, dict), "Result is not a valid JSON object"
 
 @pytest.mark.e2e
-def test_random_blog_url_only_e2e(auth_headers, base_params):
+def test_random_blog_url_e2e(auth_headers, base_params):
     """Test getting a random blog URL with real HTTP requests"""
-    base_params["action"] = "random_blog_url_only"
+    base_params["message"]["toolCalls"][0]["function"]["name"] = "random_blog_url_only"
 
-    response = make_request(BLOG_SERVER_URL, base_params, auth_headers)
-    result = response.json()
+    try:
+        response = make_request(f"{BLOG_SERVER_BASE}/random_blog_url", base_params, auth_headers)
+        result = response.json()
 
-    assert "results" in result
-    assert len(result["results"]) > 0
-    result_dict = json.loads(result["results"][0]["result"].replace("'", '"'))
-    assert "title" in result_dict
-    assert "url" in result_dict
-    assert result_dict["url"].startswith("https://idvork.in")
+        assert "results" in result, "Missing 'results' in response"
+        assert len(result["results"]) > 0, "No results found in response"
+        result_str = result["results"][0]["result"]
+        result_dict = json.loads(result_str)
+        assert "title" in result_dict, "Missing 'title' in result"
+        assert "url" in result_dict, "Missing 'url' in result"
+        assert result_dict["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
+        assert len(result_dict["title"]) > 0, "Title should not be empty"
+
+    except Exception as e:
+        ic("Error in test:", str(e))
+        raise

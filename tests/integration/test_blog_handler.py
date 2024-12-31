@@ -2,7 +2,7 @@ import os
 import pytest
 import json
 from fastapi.testclient import TestClient
-from blog_server import blog_handler_logic, app
+from blog_server import app
 from tony_server import make_call
 
 @pytest.fixture
@@ -14,41 +14,90 @@ def auth_headers():
 def base_params():
     """Fixture for base parameters structure"""
     return {
-        "action": "blog_post_from_path",
-        "markdown_path": "_d/vim_tips.md"
+        "message": {
+            "toolCalls": [{
+                "function": {
+                    "name": "",  # To be filled by individual tests
+                    "arguments": {}
+                },
+                "id": "test-id",
+                "type": "function"
+            }]
+        }
     }
 
-from fastapi.encoders import jsonable_encoder
-
-def test_blog_handler_jsonable_encoder(auth_headers, base_params):
-    """Test the blog_handler_logic with jsonable_encoder simulation"""
-    # First test the direct logic
-    result = blog_handler_logic(base_params, auth_headers)
-    encoded_result = jsonable_encoder(result)
-    
-    assert "results" in encoded_result, "Expected 'results' key in encoded result, but it was not found."
-    assert len(encoded_result["results"]) > 0, "Expected at least one result in 'results', but none were found."
-    
-    result_str = encoded_result["results"][0]["result"]
-    result_dict = json.loads(result_str)
-    
-    assert "content" in result_dict, "Expected 'content' key in result, but it was not found."
-    assert "markdown_path" in result_dict, "Expected 'markdown_path' key in result, but it was not found."
-    assert len(result_dict["content"]) > 0, "Expected non-empty content, but it was empty."
-
-    # Then test the endpoint
+def test_random_blog(auth_headers, base_params):
+    """Test the random blog endpoint"""
     client = TestClient(app)
-    response = client.post("/blog_handler", json=base_params, headers=auth_headers)
+    base_params["message"]["toolCalls"][0]["function"]["name"] = "random_blog"
     
-    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    response = client.post("/random_blog", json=base_params, headers=auth_headers)
+    assert response.status_code == 200
     
     result = response.json()
-    assert "results" in result, "Expected 'results' key in response, but it was not found."
-    assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
+    assert "results" in result
+    assert len(result["results"]) > 0
     
     result_str = result["results"][0]["result"]
     result_dict = json.loads(result_str)
+    assert "content" in result_dict
+    assert "title" in result_dict
+    assert "url" in result_dict
+    assert "markdown_path" in result_dict
+
+def test_blog_info(auth_headers, base_params):
+    """Test the blog info endpoint"""
+    client = TestClient(app)
+    base_params["message"]["toolCalls"][0]["function"]["name"] = "blog_info"
     
-    assert "content" in result_dict, "Expected 'content' key in result, but it was not found."
-    assert "markdown_path" in result_dict, "Expected 'markdown_path' key in result, but it was not found."
-    assert len(result_dict["content"]) > 0, "Expected non-empty content, but it was empty."
+    response = client.post("/blog_info", json=base_params, headers=auth_headers)
+    assert response.status_code == 200
+    
+    result = response.json()
+    assert "results" in result
+    assert len(result["results"]) > 0
+    
+    result_str = result["results"][0]["result"]
+    result_dict = json.loads(result_str)
+    assert "url" in result_dict
+    assert "title" in result_dict
+    assert result_dict["url"].startswith("https://idvork.in")
+
+def test_blog_post(auth_headers, base_params):
+    """Test the blog post endpoint"""
+    client = TestClient(app)
+    base_params["message"]["toolCalls"][0]["function"].update({
+        "name": "blog_post_from_path",
+        "arguments": {"markdown_path": "_d/vim_tips.md"}
+    })
+    
+    response = client.post("/blog_post", json=base_params, headers=auth_headers)
+    assert response.status_code == 200
+    
+    result = response.json()
+    assert "results" in result
+    assert len(result["results"]) > 0
+    
+    result_str = result["results"][0]["result"]
+    result_dict = json.loads(result_str)
+    assert "content" in result_dict
+    assert "markdown_path" in result_dict
+    assert len(result_dict["content"]) > 0
+
+def test_random_blog_url(auth_headers, base_params):
+    """Test the random blog URL endpoint"""
+    client = TestClient(app)
+    base_params["message"]["toolCalls"][0]["function"]["name"] = "random_blog_url_only"
+    
+    response = client.post("/random_blog_url", json=base_params, headers=auth_headers)
+    assert response.status_code == 200
+    
+    result = response.json()
+    assert "results" in result
+    assert len(result["results"]) > 0
+    
+    result_str = result["results"][0]["result"]
+    result_dict = json.loads(result_str)
+    assert "title" in result_dict
+    assert "url" in result_dict
+    assert result_dict["url"].startswith("https://idvork.in")
