@@ -58,11 +58,21 @@ def test_journal_read_e2e(auth_headers, base_params):
     assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
     result_str = result["results"][0]["result"]
     assert isinstance(result_str, str), "Expected result to be a string."
+
 def test_search_e2e(auth_headers, base_params):
     """Test the search endpoint with real HTTP requests"""
     ic("Starting search test")
     search_url = "https://idvorkin--modal-tony-server-search.modal.run"
-    base_params["input"] = {"question": "What is the weather in Seattle?"}
+    base_params["message"] = {
+        "toolCalls": [{
+            "function": {
+                "arguments": {"question": "What is the weather in Seattle?"},
+                "name": "search"
+            },
+            "id": "test_id",
+            "type": "function"
+        }]
+    }
 
     try:
         response = make_request(search_url, base_params, auth_headers)

@@ -165,14 +165,13 @@ def raise_if_not_authorized(headers: Dict):
 # x-vapi-secret header -
 
 
-@app.function(
+@modal_app.function(
     image=default_image,
     secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
 )
 @web_endpoint(method="POST")
 def search(params: Dict, headers=Depends(get_headers)):
     """question: the question"""
-
     raise_if_not_authorized(headers)
     call = parse_tool_call("search", params)
     url = "https://api.perplexity.ai/chat/completions"
@@ -203,7 +202,7 @@ def search(params: Dict, headers=Depends(get_headers)):
     return vapi_response
 
 
-@app.function(
+@modal_app.function(
     image=default_image,
     secrets=[Secret.from_name(ONEBUSAWAY_API_KEY), Secret.from_name(TONY_API_KEY_NAME)],
 )
@@ -239,7 +238,7 @@ JOURNAL_DATABASE_ID = "journal"
 JOURNAL_ID_CONTAINER = "journal_container"
 
 
-@app.function(
+@modal_app.function(
     image=default_image,
     secrets=[
         Secret.from_name(TONY_API_KEY_NAME),
@@ -293,7 +292,7 @@ def trusted_journal_read():
     return content
 
 
-@app.function(
+@modal_app.function(
     image=default_image,
     secrets=[
         Secret.from_name(TONY_API_KEY_NAME),
