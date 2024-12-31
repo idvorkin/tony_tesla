@@ -17,7 +17,7 @@ def clip_long_strings(output):
 ic.configureOutput(outputFunction=clip_long_strings)
 from urllib3.util.retry import Retry
 
-BLOG_SERVER_URL = "https://idvorkin--modal-blog-server-blog-handler.modal.run"
+BLOG_SERVER_URL = "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_handler"
 
 def create_session() -> requests.Session:
     """Create a session with retry logic"""

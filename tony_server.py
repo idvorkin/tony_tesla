@@ -20,7 +20,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, status
 from icecream import ic
 
 # import asyncio
-from modal import App, Image, Mount, Secret, web_endpoint
+from modal import App, Image, Mount, Secret, web_endpoint, asgi_app
 
 PPLX_API_KEY_NAME = "PPLX_API_KEY"
 TONY_API_KEY_NAME = "TONY_API_KEY"
@@ -37,93 +37,19 @@ default_image = Image.debian_slim(python_version="3.12").pip_install(
 app = FastAPI()
 modal_app = App("modal-tony-server")
 
-fastapi_app = FastAPI()
-
 modal_storage = "modal_readonly"
-
-
-def get_headers(request: Request):
-    ic(request.headers)
-    return request.headers
-
-
-async def warm_up_endpoints(secret: str):
-    """Fire and forget calls to warm up the endpoints."""
-    async with httpx.AsyncClient() as client:
-        base_url = "https://idvorkin--modal-tony-server"
-        headers = {"x-vapi-secret": secret}
-        
-        # Prepare warm-up calls
-        tasks = [
-            client.post(f"{base_url}-search.modal.run", 
-                       json={"question": "warm up"}, 
-                       headers=headers),
-            client.post(f"{base_url}-library-arrivals.modal.run", 
-                       json={}, 
-                       headers=headers),
-            client.post("https://idvorkin--modal-blog-server-blog-handler.modal.run",
-                       json={"action": "blog_info"},
-                       headers=headers)
-        ]
-        
-        # Execute calls without waiting for response
-        await asyncio.gather(*tasks, return_exceptions=True)
-
-@modal_app.function(
-    image=default_image.pip_install(["httpx"]),
-    mounts=[Mount.from_local_dir(modal_storage, remote_path="/" + modal_storage)],
-    secrets=[Secret.from_name(TONY_STORAGE_SERVER_API_KEY)],
-)
-@web_endpoint(method="POST")
-async def assistant(input: Dict, headers=Depends(get_headers)):
-    ic(input)
-    base = Path(f"/{modal_storage}")
-    assistant_txt = (base / "tony_assistant_spec.json").read_text()
-    tony = json.loads(assistant_txt)
-    tony_prompt = (base / "tony_system_prompt.md").read_text()
-    # Add context to system prompt
-    time_in_pst = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
-    journal_content = trusted_journal_read()
-    extra_state = f"""
-<CurrentState>
-    Date and Time: {time_in_pst}
-    Igor's Location: Seattle
-    <JournalContent>
-        {journal_content}
-    </JournalContent>
-</CurrentState>
-    """
-    tony_prompt += extra_state
-    ic(extra_state)
-    # update system prompt
-    tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
-
-    secret = headers.get(X_VAPI_SECRET, "no secret passed to search")
-    # Fire off warm-up calls without waiting
-    asyncio.create_task(warm_up_endpoints(secret))
-    # for each tool set the secret
-    for tool in tony["assistant"]["model"]["tools"]:
-        tool["server"]["secret"] = secret
-
-    ic(len(tony))
-
-    return tony
-
 
 class FunctionCall(pydantic.BaseModel):
     id: str
     name: str
     args: Dict
 
-
 def make_vapi_response(call: FunctionCall, result: str):
     return {"results": [{"toolCallId": call.id, "result": result}]}
-
 
 def make_call(name, input: Dict):
     id = input.get("id", str(uuid.uuid4()))
     return FunctionCall(id=id, name=name, args=input)
-
 
 def parse_tool_call(function_name, params: Dict) -> FunctionCall:
     """Parse the call from VAPI or from the test tool. When from VAPI has the following shape
@@ -151,7 +77,6 @@ def parse_tool_call(function_name, params: Dict) -> FunctionCall:
         args=tool["function"]["arguments"],
     )
 
-
 def raise_if_not_authorized(headers: Dict):
     token = headers.get(X_VAPI_SECRET, "")
     if not token:
@@ -162,10 +87,6 @@ def raise_if_not_authorized(headers: Dict):
             detail="Incorrect bearer token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-
-# x-vapi-secret header -
-
 
 def search_logic(params: Dict, headers: Dict):
     """Core search logic used by both Modal and FastAPI endpoints"""
@@ -198,29 +119,99 @@ def search_logic(params: Dict, headers: Dict):
     ic(vapi_response)
     return vapi_response
 
+DB_HOST = "https://tonyserver.documents.azure.com:443/"
+DATABASE_ID = "grateful"
+CONTAINER_ID = "main"
+JOURNAL_DATABASE_ID = "journal"
+JOURNAL_ID_CONTAINER = "journal_container"
 
-@modal_app.function(
-    image=default_image,
-    secrets=[Secret.from_name(PPLX_API_KEY_NAME), Secret.from_name(TONY_API_KEY_NAME)],
-)
-@web_endpoint(method="POST")
-def search(params: Dict, headers=Depends(get_headers)):
+def trusted_journal_read():
+    client = cosmos_client.CosmosClient(
+        DB_HOST,
+        {"masterKey": os.environ[TONY_STORAGE_SERVER_API_KEY]},
+        user_agent="tony_server.py",
+        user_agent_overwrite=True,
+    )
+    container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
+        JOURNAL_ID_CONTAINER
+    )
+    items = container.query_items("select * FROM c", enable_cross_partition_query=True)
+    first = None
+    for i in items:
+        first = i
+        break
+    ic(first)
+    content = first["content"]
+    return content
+
+def get_headers(request: Request):
+    ic(request.headers)
+    return request.headers
+
+
+async def warm_up_endpoints(secret: str):
+    """Fire and forget calls to warm up the endpoints."""
+    async with httpx.AsyncClient() as client:
+        base_url = "https://idvorkin--modal-tony-server"
+        headers = {"x-vapi-secret": secret}
+        
+        # Prepare warm-up calls
+        tasks = [
+            client.post(f"{base_url}-search.modal.run", 
+                       json={"question": "warm up"}, 
+                       headers=headers),
+            client.post(f"{base_url}-library-arrivals.modal.run", 
+                       json={}, 
+                       headers=headers),
+            client.post("https://idvorkin--modal-blog-server-blog-handler.modal.run",
+                       json={"action": "blog_info"},
+                       headers=headers)
+        ]
+        
+        # Execute calls without waiting for response
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+@app.post("/assistant")
+async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
+    ic(input)
+    base = Path(f"/{modal_storage}")
+    assistant_txt = (base / "tony_assistant_spec.json").read_text()
+    tony = json.loads(assistant_txt)
+    tony_prompt = (base / "tony_system_prompt.md").read_text()
+    # Add context to system prompt
+    time_in_pst = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
+    journal_content = trusted_journal_read()
+    extra_state = f"""
+<CurrentState>
+    Date and Time: {time_in_pst}
+    Igor's Location: Seattle
+    <JournalContent>
+        {journal_content}
+    </JournalContent>
+</CurrentState>
+    """
+    tony_prompt += extra_state
+    ic(extra_state)
+    # update system prompt
+    tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
+
+    secret = headers.get(X_VAPI_SECRET, "no secret passed to search")
+    # Fire off warm-up calls without waiting
+    asyncio.create_task(warm_up_endpoints(secret))
+    # for each tool set the secret
+    for tool in tony["assistant"]["model"]["tools"]:
+        tool["server"]["secret"] = secret
+
+    ic(len(tony))
+    return tony
+
+@app.post("/search")
+async def search_endpoint(params: Dict, headers=Depends(get_headers)):
     """Modal endpoint for search"""
     return search_logic(params, headers)
 
-
-@fastapi_app.post("/search")
-async def search_endpoint(params: Dict, headers: Dict = Depends(get_headers)):
-    """FastAPI endpoint for testing"""
-    return search_logic(params, headers)
-
-
-@modal_app.function(
-    image=default_image,
-    secrets=[Secret.from_name(ONEBUSAWAY_API_KEY), Secret.from_name(TONY_API_KEY_NAME)],
-)
-@web_endpoint(method="POST")
-def library_arrivals(params: Dict, headers=Depends(get_headers)):
+@app.post("/library-arrivals")
+async def library_arrivals_endpoint(params: Dict, headers=Depends(get_headers)):
     import onebusaway
 
     raise_if_not_authorized(headers)
@@ -243,23 +234,8 @@ def library_arrivals(params: Dict, headers=Depends(get_headers)):
     ic(vapi_response)
     return vapi_response
 
-
-DB_HOST = "https://tonyserver.documents.azure.com:443/"
-DATABASE_ID = "grateful"
-CONTAINER_ID = "main"
-JOURNAL_DATABASE_ID = "journal"
-JOURNAL_ID_CONTAINER = "journal_container"
-
-
-@modal_app.function(
-    image=default_image,
-    secrets=[
-        Secret.from_name(TONY_API_KEY_NAME),
-        Secret.from_name(TONY_STORAGE_SERVER_API_KEY),
-    ],
-)
-@web_endpoint(method="POST")
-def journal_append(params: Dict, headers=Depends(get_headers)):
+@app.post("/journal-append")
+async def journal_append_endpoint(params: Dict, headers=Depends(get_headers)):
     raise_if_not_authorized(headers)
     call = parse_tool_call("journal_append", params)
     client = cosmos_client.CosmosClient(
@@ -283,39 +259,24 @@ def journal_append(params: Dict, headers=Depends(get_headers)):
     ic(ret)
     return make_vapi_response(call, "success")
 
-
-
-def trusted_journal_read():
-    client = cosmos_client.CosmosClient(
-        DB_HOST,
-        {"masterKey": os.environ[TONY_STORAGE_SERVER_API_KEY]},
-        user_agent="tony_server.py",
-        user_agent_overwrite=True,
-    )
-    container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
-        JOURNAL_ID_CONTAINER
-    )
-    items = container.query_items("select * FROM c", enable_cross_partition_query=True)
-    first = None
-    for i in items:
-        first = i
-        break
-    ic(first)
-    content = first["content"]
-    return content
-
-
-@modal_app.function(
-    image=default_image,
-    secrets=[
-        Secret.from_name(TONY_API_KEY_NAME),
-        Secret.from_name(TONY_STORAGE_SERVER_API_KEY),
-    ],
-)
-@web_endpoint(method="POST")
-def journal_read(params: Dict, headers=Depends(get_headers)):
+@app.post("/journal-read")
+async def journal_read_endpoint(params: Dict, headers=Depends(get_headers)):
     raise_if_not_authorized(headers)
     call = parse_tool_call("journal_read", params)
     content = trusted_journal_read()
     return make_vapi_response(call, f"{content}")
+
+@modal_app.function(
+    image=default_image.pip_install(["httpx"]),
+    mounts=[Mount.from_local_dir(modal_storage, remote_path="/" + modal_storage)],
+    secrets=[
+        Secret.from_name(TONY_API_KEY_NAME),
+        Secret.from_name(TONY_STORAGE_SERVER_API_KEY),
+        Secret.from_name(PPLX_API_KEY_NAME),
+        Secret.from_name(ONEBUSAWAY_API_KEY),
+    ],
+)
+@asgi_app()
+def fastapi_app():
+    return app
 

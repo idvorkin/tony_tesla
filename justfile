@@ -55,7 +55,9 @@ test-blog-post:
         action="blog_post_from_path" \
         markdown_path="_d/vim_tips.md"
 
-deploy-all: deploy deploy-blog
+deploy-all:
+    modal deploy tony_server.py::modal_app
+    modal deploy blog_server.py::modal_app
 
 deploy-blog:
     modal deploy blog_server.py

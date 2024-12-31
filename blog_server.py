@@ -2,7 +2,7 @@ from typing import Dict, Optional
 from pydantic import BaseModel
 import requests, json
 from icecream import ic
-from modal import App, Image, Secret, web_endpoint
+from modal import App, Image, Secret, web_endpoint, asgi_app
 from fastapi import Depends, FastAPI, Request
 
 class UrlInfo(BaseModel):
@@ -31,19 +31,26 @@ from tony_server import (
     FunctionCall, make_call
 )
 
-app = App("modal-blog-server")
+app = FastAPI()
+modal_app = App("modal-blog-server")
 
-fastapi_app = FastAPI()
+@app.post("/blog_handler")
+async def blog_handler_endpoint(params: Dict, headers=Depends(get_headers)):
+    """Modal endpoint that calls the core logic"""
+    try:
+        return blog_handler_logic(params, headers)
+    except Exception as e:
+        ic(f"Error in blog_handler: {str(e)}")
+        ic(f"Params: {params}")
+        raise
 
-@fastapi_app.post("/blog_handler")
-async def blog_handler_endpoint(params: Dict, headers: Dict = Depends(get_headers)):
-    """FastAPI endpoint that calls the core logic"""
-    return blog_handler_logic(params, headers)
-    url: str
-    title: str = ""
-    description: str = ""
-    redirect_url: Optional[str] = ""
-    markdown_path: Optional[str] = ""
+@modal_app.function(
+    image=default_image,
+    secrets=[Secret.from_name(TONY_API_KEY_NAME)],
+)
+@asgi_app()
+def fastapi_app():
+    return app
 
 class BlogReader:
     def __init__(self):
@@ -194,17 +201,3 @@ def blog_handler_logic(params: Dict, headers: Dict) -> Dict:
 
     else:
         return make_vapi_response(call, f"Unknown action: {action}")
-
-@app.function(
-    image=default_image,
-    secrets=[Secret.from_name(TONY_API_KEY_NAME)],
-)
-@web_endpoint(method="POST")
-def blog_handler(params: Dict, headers=Depends(get_headers)):
-    """Modal endpoint that calls the core logic"""
-    try:
-        return blog_handler_logic(params, headers)
-    except Exception as e:
-        ic(f"Error in blog_handler: {str(e)}")
-        ic(f"Params: {params}")
-        raise

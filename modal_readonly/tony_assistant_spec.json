@@ -28,7 +28,7 @@
           },
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-tony-server-library-arrivals.modal.run",
+            "url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/library-arrivals",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -48,7 +48,7 @@
           },
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-tony-server-journal-read.modal.run",
+            "url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/journal-read",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -68,7 +68,7 @@
           },
           "async": true,
           "server": {
-            "url": "https://idvorkin--modal-tony-server-journal-append.modal.run",
+            "url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/journal-append",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -88,7 +88,7 @@
           },
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-tony-server-search.modal.run",
+            "url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/search",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -111,7 +111,7 @@
           },
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-blog-server-blog-handler.modal.run",
+            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_handler",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -134,7 +134,7 @@
           },
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-blog-server-blog-handler.modal.run",
+            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_handler",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -161,7 +161,7 @@
           },
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-blog-server-blog-handler.modal.run",
+            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_handler",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },
@@ -184,7 +184,7 @@
           },
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-blog-server-blog-handler.modal.run",
+            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_handler",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         }
