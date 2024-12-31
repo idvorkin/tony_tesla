@@ -48,7 +48,11 @@ tony = "tony:app"
 bus = "bus:app"
 
 [tool.pytest.ini_options]
-testpaths = ["test_*.py"]
+testpaths = [
+    "tests/unit",
+    "tests/integration",
+    "tests/e2e"
+]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short -n auto"
