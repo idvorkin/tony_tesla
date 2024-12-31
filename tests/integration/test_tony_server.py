@@ -1,7 +1,7 @@
 import os
 import pytest
 from fastapi.testclient import TestClient
-from tony_server import search, app
+from tony_server import search, fastapi_app
 
 @pytest.fixture
 def auth_headers():
@@ -28,7 +28,7 @@ def base_params():
 
 def test_search_function(auth_headers, base_params):
     """Test the search function with a mock request"""
-    client = TestClient(app)
+    client = TestClient(fastapi_app)
     response = client.post("/search", json=base_params, headers=auth_headers)
     
     assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
