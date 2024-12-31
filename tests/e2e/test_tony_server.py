@@ -64,13 +64,22 @@ def test_search_e2e(auth_headers, base_params):
     search_url = "https://idvorkin--modal-tony-server-search.modal.run"
     base_params["input"] = {"question": "What is the weather in Seattle?"}
 
-    response = make_request(search_url, base_params, auth_headers)
-    result = response.json()
+    try:
+        response = make_request(search_url, base_params, auth_headers)
+        result = response.json()
 
-    assert "results" in result, "Expected 'results' key in response, but it was not found."
-    assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
-    result_str = result["results"][0]["result"]
-    assert isinstance(result_str, str), "Expected result to be a string."
+        assert "results" in result, "Expected 'results' key in response, but it was not found."
+        assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
+        result_str = result["results"][0]["result"]
+        assert isinstance(result_str, str), "Expected result to be a string."
+    except requests.exceptions.RequestException as e:
+        ic("Request failed:", str(e))
+        ic("Response content:", getattr(e.response, 'content', None))
+        raise
+    except json.JSONDecodeError as e:
+        ic("JSON decode error:", str(e))
+        ic("Response content:", response.content)
+        raise
 
 @pytest.mark.e2e
 def test_assistant_e2e(auth_headers, base_params):
