@@ -67,3 +67,22 @@ test-random-blog-url:
     http POST https://idvorkin--modal-blog-server-blog-handler.modal.run \
         x-vapi-secret:$TONY_API_KEY \
         action="random_blog_url_only"
+
+# Test commands
+test:
+    pytest -n auto
+
+test-debug:
+    pytest -v
+
+test-coverage:
+    pytest -n auto --cov=. --cov-report=term-missing
+
+test-unit:
+    pytest tests/unit -n auto
+
+test-integration: 
+    pytest tests/integration -n auto
+
+test-e2e:
+    pytest tests/e2e -n auto
