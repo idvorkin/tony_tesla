@@ -41,6 +41,33 @@ def base_params():
         "input": {"message": "Test message"}
     }
 
+def test_journal_read_e2e(auth_headers, base_params):
+    """Test the journal_read endpoint with real HTTP requests"""
+    ic("Starting journal read test")
+    journal_read_url = "https://idvorkin--modal-tony-server-journal-read.modal.run"
+    base_params["input"] = {"date": "2024-12-31"}
+
+    response = make_request(journal_read_url, base_params, auth_headers)
+    result = response.json()
+
+    assert "results" in result, "Expected 'results' key in response, but it was not found."
+    assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
+    result_str = result["results"][0]["result"]
+    assert isinstance(result_str, str), "Expected result to be a string."
+def test_search_e2e(auth_headers, base_params):
+    """Test the search endpoint with real HTTP requests"""
+    ic("Starting search test")
+    search_url = "https://idvorkin--modal-tony-server-search.modal.run"
+    base_params["input"] = {"question": "What is the weather in Seattle?"}
+
+    response = make_request(search_url, base_params, auth_headers)
+    result = response.json()
+
+    assert "results" in result, "Expected 'results' key in response, but it was not found."
+    assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
+    result_str = result["results"][0]["result"]
+    assert isinstance(result_str, str), "Expected result to be a string."
+
 @pytest.mark.e2e
 def test_assistant_e2e(auth_headers, base_params):
     """Test the assistant endpoint with real HTTP requests"""
