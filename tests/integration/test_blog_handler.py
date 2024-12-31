@@ -59,9 +59,17 @@ def test_blog_info(auth_headers, base_params):
     
     result_str = result["results"][0]["result"]
     result_dict = json.loads(result_str)
-    assert "url" in result_dict
-    assert "title" in result_dict
-    assert result_dict["url"].startswith("https://idvork.in")
+    assert isinstance(result_dict, list), "Result should be a list of blog posts"
+    assert len(result_dict) > 100, f"Expected more than 100 blog posts, but got {len(result_dict)}"
+    
+    # Verify structure of first post
+    first_post = result_dict[0]
+    assert "url" in first_post, "Missing 'url' in result"
+    assert "title" in first_post, "Missing 'title' in result"
+    assert "description" in first_post, "Missing 'description' in result"
+    assert "markdown_path" in first_post, "Missing 'markdown_path' in result"
+    assert first_post["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
+    assert len(first_post["title"]) > 0, "Title should not be empty"
 
 def test_blog_post(auth_headers, base_params):
     """Test the blog post endpoint"""

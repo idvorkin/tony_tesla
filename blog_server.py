@@ -90,29 +90,28 @@ async def random_blog_endpoint(params: Dict, headers=Depends(get_headers)):
 
 @app.post("/blog_info")
 async def blog_info_endpoint(params: Dict, headers=Depends(get_headers)):
-    """Get information about the first valid blog post"""
+    """Get information about all blog posts"""
     try:
         raise_if_not_authorized(headers)
         call = parse_tool_call("blog_info", params)
         
         blog = BlogReader()
         url_info = blog.get_url_info()
-        info = next(
-            (info for info in url_info.values() if info.url and info.title), 
-            None
-        )
+        posts = [
+            {
+                "url": f"https://idvork.in{info.url}",
+                "title": info.title,
+                "description": info.description,
+                "markdown_path": info.markdown_path
+            }
+            for info in url_info.values()
+            if info.url and info.title
+        ]
         
-        if not info:
+        if not posts:
             return make_vapi_response(call, "No valid blog info found")
             
-        result = {
-            "url": f"https://idvork.in{info.url}",
-            "title": info.title,
-            "description": info.description,
-            "markdown_path": info.markdown_path
-        }
-        
-        return make_vapi_response(call, json.dumps(result))
+        return make_vapi_response(call, json.dumps(posts))
     except Exception as e:
         ic(f"Error in blog_info: {str(e)}")
         raise

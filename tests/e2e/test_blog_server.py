@@ -126,12 +126,18 @@ def test_blog_info_e2e(auth_headers, base_params):
         assert len(result["results"]) > 0, "No results found in response"
         result_str = result["results"][0]["result"]
         result_dict = json.loads(result_str)
-        assert "url" in result_dict, "Missing 'url' in result"
-        assert "title" in result_dict, "Missing 'title' in result"
-        assert "description" in result_dict, "Missing 'description' in result"
-        assert "markdown_path" in result_dict, "Missing 'markdown_path' in result"
-        assert result_dict["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
-        assert len(result_dict["title"]) > 0, "Title should not be empty"
+        
+        assert isinstance(result_dict, list), "Result should be a list of blog posts"
+        assert len(result_dict) > 100, f"Expected more than 100 blog posts, but got {len(result_dict)}"
+        
+        # Verify structure of first post
+        first_post = result_dict[0]
+        assert "url" in first_post, "Missing 'url' in first post"
+        assert "title" in first_post, "Missing 'title' in first post"
+        assert "description" in first_post, "Missing 'description' in first post"
+        assert "markdown_path" in first_post, "Missing 'markdown_path' in first post"
+        assert first_post["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
+        assert len(first_post["title"]) > 0, "Title should not be empty"
 
     except Exception as e:
         ic("Error in test:", str(e))
