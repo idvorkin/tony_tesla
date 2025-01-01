@@ -56,11 +56,11 @@ test-blog-post:
         markdown_path="_d/vim_tips.md"
 
 deploy-all:
-    modal deploy tony_server.py::modal_app
-    modal deploy blog_server.py::modal_app
+    just deploy
+    just deploy-blog
 
 deploy-blog:
-    modal deploy blog_server.py
+    modal deploy blog_server.py::modal_app
 
 run-dev-blog-server:
     modal serve blog_server.py
@@ -84,7 +84,7 @@ test-unit:
     pytest tests/unit -n auto
 
 test-integration: 
-    pytest tests/integration -n auto
+    pytest tests/integration -n auto --dist loadscope -v
 
 test-e2e:
     pytest tests/e2e -n auto
