@@ -188,10 +188,11 @@ async def blog_search_endpoint(params: Dict, headers=Depends(get_headers)):
         if not query:
             return make_vapi_response(call, "Error: Search query is required")
             
-        # Make the search request
+        # Make the search request with filters to exclude ig66 collection
         payload = {
             "query": query,
-            "hitsPerPage": 5  # Limit results to top 5
+            "hitsPerPage": 5,  # Limit results to top 5
+            "filters": "NOT collection:ig66"  # Exclude ig66 collection
         }
         
         search_response = requests.post(url, headers=headers, json=payload)

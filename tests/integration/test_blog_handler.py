@@ -1,8 +1,9 @@
+import json
 import os
 import pytest
-import json
+import requests
 from fastapi.testclient import TestClient
-from blog_server import app
+from blog_server import app, ALGOLIA_APP_ID, ALGOLIA_API_KEY, ALGOLIA_INDEX_NAME
 from tony_server import make_call
 
 @pytest.fixture
@@ -113,28 +114,57 @@ def test_random_blog_url(auth_headers, base_params):
 def test_blog_search(auth_headers, base_params):
     """Test the blog search endpoint"""
     client = TestClient(app)
+    
+    # First search directly with Algolia to confirm there are ig66 results for meditation
+    algolia_url = f"https://{ALGOLIA_APP_ID.lower()}-1.algolianet.com/1/indexes/{ALGOLIA_INDEX_NAME}/query"
+    algolia_headers = {
+        "X-Algolia-API-Key": ALGOLIA_API_KEY,
+        "X-Algolia-Application-Id": ALGOLIA_APP_ID,
+        "Content-Type": "application/json"
+    }
+    algolia_payload = {
+        "query": "meditation",
+        "hitsPerPage": 20  # Get more results to increase chance of finding ig66 content
+    }
+    
+    algolia_response = requests.post(algolia_url, headers=algolia_headers, json=algolia_payload)
+    algolia_response.raise_for_status()
+    algolia_results = algolia_response.json()
+    
+    # Verify there are ig66 results in Algolia
+    assert any(hit["collection"] == "ig66" for hit in algolia_results["hits"]), \
+        "Should find at least one ig66 result for 'meditation' query in Algolia"
+    
+    # Now test our filtered endpoint
     base_params["message"]["toolCalls"][0]["function"].update({
         "name": "blog_search",
         "arguments": {"query": "meditation"}
     })
     
     response = client.post("/blog_search", json=base_params, headers=auth_headers)
-    
-    # Check response status and structure
-    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    assert response.status_code == 200
     
     result = response.json()
-    assert "results" in result, "Expected 'results' key in response"
-    assert len(result["results"]) > 0, "Expected at least one result"
+    assert "results" in result
+    assert len(result["results"]) > 0
     
-    # Parse the results JSON string
-    search_results = json.loads(result["results"][0]["result"])
-    assert isinstance(search_results, list), "Expected results to be a list"
+    result_str = result["results"][0]["result"]
+    filtered_results = json.loads(result_str)
+    assert isinstance(filtered_results, list), "Result should be a list of search results"
+    assert len(filtered_results) > 0, "Should have at least one search result"
     
-    # Check the structure of each search result
-    if len(search_results) > 0:
-        first_result = search_results[0]
-        assert "title" in first_result, "Expected 'title' in search result"
-        assert "url" in first_result, "Expected 'url' in search result"
-        assert "content" in first_result, "Expected 'content' in search result"
-        assert first_result["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
+    # Verify structure of first result
+    first_result = filtered_results[0]
+    assert "url" in first_result, "Missing 'url' in result"
+    assert "title" in first_result, "Missing 'title' in result"
+    assert "content" in first_result, "Missing 'content' in result"
+    assert "collection" in first_result, "Missing 'collection' in result"
+    assert first_result["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
+    
+    # Verify no results are from ig66 collection
+    assert all(result["collection"] != "ig66" for result in filtered_results), \
+        "Search results should not include posts from ig66 collection"
+    
+    # Verify we still get non-ig66 results
+    assert any(result["collection"] != "ig66" for result in filtered_results), \
+        "Should still find non-ig66 results for 'meditation' query"
