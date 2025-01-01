@@ -135,22 +135,22 @@
         {
           "type": "function",
           "function": {
-            "name": "blog_post_from_path",
-            "description": "Get the content of a specific blog post from Igor's blog using its markdown path",
+            "name": "read_blog_post",
+            "description": "Get the content of a specific blog post from Igor's blog using its markdown path or URL",
             "parameters": {
               "type": "object",
               "properties": {
-                "markdown_path": {
+                "path": {
                   "type": "string",
-                  "description": "The path to the markdown file in the GitHub repository"
+                  "description": "The path to the blog post - can be either a markdown file path (e.g., '_d/vim_tips.md') or a URL path (e.g., '/vim')"
                 }
               },
-              "required": ["markdown_path"]
+              "required": ["path"]
             }
           },
           "async": false,
           "server": {
-            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_post",
+            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/read_blog_post",
             "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
           }
         },

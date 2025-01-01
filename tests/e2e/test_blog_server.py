@@ -144,15 +144,15 @@ def test_blog_info_e2e(auth_headers, base_params):
         raise
 
 @pytest.mark.e2e
-def test_blog_post_e2e(auth_headers, base_params):
+def test_read_blog_post_e2e(auth_headers, base_params):
     """Test getting a specific blog post with real HTTP requests"""
     base_params["message"]["toolCalls"][0]["function"].update({
-        "name": "blog_post_from_path",
-        "arguments": {"markdown_path": "_d/vim_tips.md"}
+        "name": "read_blog_post",
+        "arguments": {"path": "_d/vim_tips.md"}
     })
 
     try:
-        response = make_request(f"{BLOG_SERVER_BASE}/blog_post", base_params, auth_headers)
+        response = make_request(f"{BLOG_SERVER_BASE}/read_blog_post", base_params, auth_headers)
         result = response.json()
 
         assert "results" in result, "Missing 'results' in response"
@@ -165,6 +165,18 @@ def test_blog_post_e2e(auth_headers, base_params):
         assert len(result_dict["content"]) > 0, "Content should not be empty"
         assert result_dict["markdown_path"] == "_d/vim_tips.md", "Incorrect markdown path"
         assert isinstance(result_dict, dict), "Result should be a valid JSON object"
+
+        # Test with URL path
+        base_params["message"]["toolCalls"][0]["function"]["arguments"]["path"] = "/vim"
+        response = make_request(f"{BLOG_SERVER_BASE}/read_blog_post", base_params, auth_headers)
+        result = response.json()
+        result_str = result["results"][0]["result"]
+        result_dict = json.loads(result_str)
+        
+        assert "content" in result_dict, "Missing 'content' in result"
+        assert "markdown_path" in result_dict, "Missing 'markdown_path' in result"
+        assert len(result_dict["content"]) > 0, "Content should not be empty"
+        assert result_dict["markdown_path"] == "_d/vim_tips.md", "Incorrect markdown path from URL"
 
     except Exception as e:
         ic("Error in test:", str(e))

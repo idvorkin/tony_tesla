@@ -5,6 +5,7 @@ import requests
 from fastapi.testclient import TestClient
 from blog_server import app, ALGOLIA_APP_ID, ALGOLIA_API_KEY, ALGOLIA_INDEX_NAME
 from tony_server import make_call
+from unittest.mock import patch, MagicMock
 
 @pytest.fixture
 def auth_headers():
@@ -15,24 +16,14 @@ def auth_headers():
 def base_params():
     """Fixture for base parameters structure"""
     return {
-        "message": {
-            "toolCalls": [{
-                "function": {
-                    "name": "",  # To be filled by individual tests
-                    "arguments": {}
-                },
-                "id": "test-id",
-                "type": "function"
-            }]
-        }
+        "path": None,  # For blog_post endpoint
+        "query": None  # For blog_search endpoint
     }
 
 def test_random_blog(auth_headers, base_params):
     """Test the random blog endpoint"""
     client = TestClient(app)
-    base_params["message"]["toolCalls"][0]["function"]["name"] = "random_blog"
-    
-    response = client.post("/random_blog", json=base_params, headers=auth_headers)
+    response = client.post("/random_blog", json={}, headers=auth_headers)
     assert response.status_code == 200
     
     result = response.json()
@@ -49,9 +40,7 @@ def test_random_blog(auth_headers, base_params):
 def test_blog_info(auth_headers, base_params):
     """Test the blog info endpoint"""
     client = TestClient(app)
-    base_params["message"]["toolCalls"][0]["function"]["name"] = "blog_info"
-    
-    response = client.post("/blog_info", json=base_params, headers=auth_headers)
+    response = client.post("/blog_info", json={}, headers=auth_headers)
     assert response.status_code == 200
     
     result = response.json()
@@ -72,33 +61,48 @@ def test_blog_info(auth_headers, base_params):
     assert first_post["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
     assert len(first_post["title"]) > 0, "Title should not be empty"
 
-def test_blog_post(auth_headers, base_params):
-    """Test the blog post endpoint"""
+def test_read_blog_post(auth_headers, base_params):
+    """Test the read blog post endpoint"""
     client = TestClient(app)
-    base_params["message"]["toolCalls"][0]["function"].update({
-        "name": "blog_post_from_path",
-        "arguments": {"markdown_path": "_d/vim_tips.md"}
-    })
     
-    response = client.post("/blog_post", json=base_params, headers=auth_headers)
+    # Test with markdown path - using a known existing post
+    params = {"path": "_d/vim_tips.md"}
+    response = client.post("/read_blog_post", json=params, headers=auth_headers)
     assert response.status_code == 200
     
     result = response.json()
+    print(f"Response for markdown path: {result}")  # Debug print
     assert "results" in result
     assert len(result["results"]) > 0
     
     result_str = result["results"][0]["result"]
+    print(f"Result string: {result_str}")  # Debug print
     result_dict = json.loads(result_str)
     assert "content" in result_dict
     assert "markdown_path" in result_dict
     assert len(result_dict["content"]) > 0
+    assert result_dict["markdown_path"] == "_d/vim_tips.md"
+    assert "vim" in result_dict["content"].lower()
+    
+    # Test with URL path
+    params = {"path": "/vim"}
+    response = client.post("/read_blog_post", json=params, headers=auth_headers)
+    assert response.status_code == 200
+    
+    result = response.json()
+    print(f"Response for URL path: {result}")  # Debug print
+    result_str = result["results"][0]["result"]
+    print(f"Result string for URL: {result_str}")  # Debug print
+    result_dict = json.loads(result_str)
+    assert "content" in result_dict
+    assert "markdown_path" in result_dict
+    assert result_dict["markdown_path"] == "_d/vim_tips.md"
+    assert "vim" in result_dict["content"].lower()
 
 def test_random_blog_url(auth_headers, base_params):
     """Test the random blog URL endpoint"""
     client = TestClient(app)
-    base_params["message"]["toolCalls"][0]["function"]["name"] = "random_blog_url_only"
-    
-    response = client.post("/random_blog_url", json=base_params, headers=auth_headers)
+    response = client.post("/random_blog_url", json={}, headers=auth_headers)
     assert response.status_code == 200
     
     result = response.json()
@@ -136,12 +140,8 @@ def test_blog_search(auth_headers, base_params):
         "Should find at least one ig66 result for 'meditation' query in Algolia"
     
     # Now test our filtered endpoint
-    base_params["message"]["toolCalls"][0]["function"].update({
-        "name": "blog_search",
-        "arguments": {"query": "meditation"}
-    })
-    
-    response = client.post("/blog_search", json=base_params, headers=auth_headers)
+    params = {"query": "meditation"}
+    response = client.post("/blog_search", json=params, headers=auth_headers)
     assert response.status_code == 200
     
     result = response.json()

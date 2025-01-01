@@ -64,6 +64,18 @@ class BlogReader:
         
         return url_info
 
+    def url_to_markdown_path(self, url: str) -> Optional[str]:
+        """Convert a blog URL to its corresponding markdown path"""
+        # Strip the domain if present
+        if url.startswith("https://idvork.in"):
+            url = url[len("https://idvork.in"):]
+        
+        # Get URL info and find the matching entry
+        url_info = self.get_url_info()
+        if url in url_info and url_info[url].markdown_path:
+            return url_info[url].markdown_path
+        return None
+
 @app.post("/random_blog")
 async def random_blog_endpoint(params: Dict, headers=Depends(get_headers)):
     """Get a random blog post with full content"""
@@ -121,16 +133,29 @@ async def blog_info_endpoint(params: Dict, headers=Depends(get_headers)):
         ic(f"Error in blog_info: {str(e)}")
         raise
 
-@app.post("/blog_post")
-async def blog_post_endpoint(params: Dict, headers=Depends(get_headers)):
-    """Get a specific blog post by markdown path"""
+@app.post("/read_blog_post")
+async def read_blog_post_endpoint(params: Dict, headers=Depends(get_headers)):
+    """Get a blog post by markdown path or URL"""
     try:
         raise_if_not_authorized(headers)
-        call = parse_tool_call("blog_post_from_path", params)
+        call = parse_tool_call("read_blog_post", params)
         
-        markdown_path = call.args.get("markdown_path")
-        if not markdown_path or not markdown_path.endswith(".md"):
-            return make_vapi_response(call, "Error: Valid markdown_path is required")
+        path = call.args.get("path")
+        if not path:
+            return make_vapi_response(call, "Error: Valid path is required")
+        
+        blog = BlogReader()
+        markdown_path = path
+        
+        # If it looks like a URL, try to convert it to a markdown path
+        if path.startswith("http") or path.startswith("/"):
+            markdown_path = blog.url_to_markdown_path(path)
+            if not markdown_path:
+                return make_vapi_response(call, f"Error: Could not find markdown path for URL: {path}")
+        
+        # Append .md if not present
+        if not markdown_path.endswith(".md"):
+            markdown_path = f"{markdown_path}.md"
             
         content = read_blog_post(markdown_path)
         result = {
@@ -140,7 +165,7 @@ async def blog_post_endpoint(params: Dict, headers=Depends(get_headers)):
         
         return make_vapi_response(call, json.dumps(result))
     except Exception as e:
-        ic(f"Error in blog_post: {str(e)}")
+        ic(f"Error in read_blog_post: {str(e)}")
         raise
 
 @app.post("/random_blog_url")
