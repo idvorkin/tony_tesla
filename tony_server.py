@@ -63,11 +63,17 @@ def make_call(name, input: Dict):
 
 def parse_tool_call(function_name, params: Dict) -> FunctionCall:
     """Parse the call from VAPI or from the test tool."""
-    message = params.get("message", "")
-    if not message:
-        ic(params)
-        return make_call(function_name, params)
-
+    # Handle simple format (used in tests and justfile commands)
+    if not params.get("message"):
+        args = {k: v for k, v in params.items() if v is not None}
+        return FunctionCall(
+            id=str(uuid.uuid4()),
+            name=function_name,
+            args=args
+        )
+    
+    # Handle complex format (used by VAPI)
+    message = params["message"]
     ic(message.keys())
     toolCalls = message["toolCalls"]
     ic(toolCalls)
@@ -166,7 +172,18 @@ async def warm_up_endpoints(secret: str):
                        json={},
                        headers=headers),
             client.post("https://idvorkin--modal-blog-server-blog-handler.modal.run",
-                       json={"action": "blog_info"},
+                       json={
+                           "message": {
+                               "toolCalls": [{
+                                   "function": {
+                                       "name": "blog_info",
+                                       "arguments": {}
+                                   },
+                                   "id": "warm-up",
+                                   "type": "function"
+                               }]
+                           }
+                       },
                        headers=headers)
         ]
 

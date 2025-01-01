@@ -41,19 +41,16 @@ test-search-dev:
 
 test-blog-info:
     http POST https://idvorkin--modal-blog-server-blog-handler.modal.run \
-        x-vapi-secret:$TONY_API_KEY \
-        action="blog_info"
+        x-vapi-secret:$TONY_API_KEY
 
 test-random-blog:
     http POST https://idvorkin--modal-blog-server-blog-handler.modal.run \
-        x-vapi-secret:$TONY_API_KEY \
-        action="random_blog"
+        x-vapi-secret:$TONY_API_KEY
 
-test-blog-post:
-    http POST https://idvorkin--modal-blog-server-blog-handler.modal.run \
+test-read-blog-post:
+    http POST https://idvorkin--modal-blog-server-read-blog-post.modal.run \
         x-vapi-secret:$TONY_API_KEY \
-        action="blog_post_from_path" \
-        markdown_path="_d/vim_tips.md"
+        path="_d/vim_tips.md"
 
 deploy-all:
     just deploy
@@ -67,8 +64,7 @@ run-dev-blog-server:
 
 test-random-blog-url:
     http POST https://idvorkin--modal-blog-server-blog-handler.modal.run \
-        x-vapi-secret:$TONY_API_KEY \
-        action="random_blog_url_only"
+        x-vapi-secret:$TONY_API_KEY
 
 # Test commands
 test:
