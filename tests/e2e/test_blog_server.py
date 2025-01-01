@@ -191,3 +191,42 @@ def test_random_blog_url_e2e(auth_headers, base_params):
     except Exception as e:
         ic("Error in test:", str(e))
         raise
+
+@pytest.mark.e2e
+def test_blog_search_e2e(auth_headers, base_params):
+    """End-to-end test for blog search functionality"""
+    ic("Starting blog search test")
+    base_params["message"]["toolCalls"][0]["function"].update({
+        "name": "blog_search",
+        "arguments": {"query": "meditation"}
+    })
+
+    try:
+        response = make_request(f"{BLOG_SERVER_BASE}/blog_search", base_params, auth_headers)
+        result = response.json()
+        
+        assert "results" in result, "Expected 'results' key in response"
+        assert len(result["results"]) > 0, "Expected at least one result"
+        
+        # Parse and verify search results
+        search_results = json.loads(result["results"][0]["result"])
+        assert isinstance(search_results, list), "Expected results to be a list"
+        assert len(search_results) > 0, "Expected at least one search result"
+        
+        # Verify first result structure and content
+        first_result = search_results[0]
+        assert "title" in first_result, "Expected 'title' in search result"
+        assert "url" in first_result, "Expected 'url' in search result"
+        assert "content" in first_result, "Expected 'content' in search result"
+        assert "collection" in first_result, "Expected 'collection' in search result"
+        
+        # Verify URL format
+        assert first_result["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
+        
+        # Verify content relevance
+        assert any("meditation" in result["content"].lower() for result in search_results), \
+            "Expected at least one result to contain the search term in content"
+
+    except Exception as e:
+        ic("Error in test:", str(e))
+        raise

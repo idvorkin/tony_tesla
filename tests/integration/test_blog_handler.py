@@ -109,3 +109,32 @@ def test_random_blog_url(auth_headers, base_params):
     assert "title" in result_dict
     assert "url" in result_dict
     assert result_dict["url"].startswith("https://idvork.in")
+
+def test_blog_search(auth_headers, base_params):
+    """Test the blog search endpoint"""
+    client = TestClient(app)
+    base_params["message"]["toolCalls"][0]["function"].update({
+        "name": "blog_search",
+        "arguments": {"query": "meditation"}
+    })
+    
+    response = client.post("/blog_search", json=base_params, headers=auth_headers)
+    
+    # Check response status and structure
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    result = response.json()
+    assert "results" in result, "Expected 'results' key in response"
+    assert len(result["results"]) > 0, "Expected at least one result"
+    
+    # Parse the results JSON string
+    search_results = json.loads(result["results"][0]["result"])
+    assert isinstance(search_results, list), "Expected results to be a list"
+    
+    # Check the structure of each search result
+    if len(search_results) > 0:
+        first_result = search_results[0]
+        assert "title" in first_result, "Expected 'title' in search result"
+        assert "url" in first_result, "Expected 'url' in search result"
+        assert "content" in first_result, "Expected 'content' in search result"
+        assert first_result["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"

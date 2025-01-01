@@ -2,6 +2,8 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 from tony_server import app, parse_tool_call, make_vapi_response
+from blog_server import app as blog_app
+import json
 
 @pytest.fixture
 def auth_headers():
@@ -59,3 +61,44 @@ def test_make_vapi_response():
     assert len(response["results"]) == 1
     assert response["results"][0]["toolCallId"] == "test_id"
     assert response["results"][0]["result"] == "test result"
+
+def test_blog_search(auth_headers):
+    """Test the blog search endpoint"""
+    client = TestClient(blog_app)
+    
+    # Test parameters for blog search
+    params = {
+        "message": {
+            "toolCalls": [
+                {
+                    "function": {
+                        "name": "blog_search",
+                        "arguments": {"query": "meditation"}
+                    },
+                    "id": "test_id",
+                    "type": "function"
+                }
+            ]
+        }
+    }
+    
+    response = client.post("/blog_search", json=params, headers=auth_headers)
+    
+    # Check response status and structure
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    result = response.json()
+    assert "results" in result, "Expected 'results' key in response"
+    assert len(result["results"]) > 0, "Expected at least one result"
+    
+    # Parse the results JSON string
+    search_results = json.loads(result["results"][0]["result"])
+    assert isinstance(search_results, list), "Expected results to be a list"
+    
+    # Check the structure of each search result
+    if len(search_results) > 0:
+        first_result = search_results[0]
+        assert "title" in first_result, "Expected 'title' in search result"
+        assert "url" in first_result, "Expected 'url' in search result"
+        assert "content" in first_result, "Expected 'content' in search result"
+        assert first_result["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"

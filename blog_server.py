@@ -8,6 +8,11 @@ from icecream import ic
 from modal import App, Image, Secret, web_endpoint, asgi_app
 from fastapi import Depends, FastAPI, Request
 
+# Algolia configuration
+ALGOLIA_APP_ID = "RY6D0RNCA3"
+ALGOLIA_API_KEY = "d4bae7d1d6328352ce13c0978ca620e9"
+ALGOLIA_INDEX_NAME = "jekyll"
+
 class UrlInfo(BaseModel):
     url: str
     title: str = ""
@@ -161,6 +166,54 @@ async def random_blog_url_endpoint(params: Dict, headers=Depends(get_headers)):
         return make_vapi_response(call, json.dumps(result))
     except Exception as e:
         ic(f"Error in random_blog_url: {str(e)}")
+        raise
+
+@app.post("/blog_search")
+async def blog_search_endpoint(params: Dict, headers=Depends(get_headers)):
+    """Search blog posts using Algolia"""
+    try:
+        raise_if_not_authorized(headers)
+        call = parse_tool_call("blog_search", params)
+        
+        # Prepare Algolia search request
+        url = f"https://{ALGOLIA_APP_ID.lower()}-1.algolianet.com/1/indexes/{ALGOLIA_INDEX_NAME}/query"
+        headers = {
+            "X-Algolia-API-Key": ALGOLIA_API_KEY,
+            "X-Algolia-Application-Id": ALGOLIA_APP_ID,
+            "Content-Type": "application/json"
+        }
+        
+        # Get search query from parameters
+        query = call.args.get("query", "")
+        if not query:
+            return make_vapi_response(call, "Error: Search query is required")
+            
+        # Make the search request
+        payload = {
+            "query": query,
+            "hitsPerPage": 5  # Limit results to top 5
+        }
+        
+        search_response = requests.post(url, headers=headers, json=payload)
+        search_response.raise_for_status()
+        
+        # Process and format the results
+        results = search_response.json()
+        hits = results.get("hits", [])
+        
+        formatted_results = []
+        for hit in hits:
+            formatted_hit = {
+                "title": hit.get("title", ""),
+                "url": f"https://idvork.in{hit.get('url', '')}",
+                "content": hit.get("content", ""),
+                "collection": hit.get("collection", "")
+            }
+            formatted_results.append(formatted_hit)
+        
+        return make_vapi_response(call, json.dumps(formatted_results))
+    except Exception as e:
+        ic(f"Error in blog_search: {str(e)}")
         raise
 
 @modal_app.function(
