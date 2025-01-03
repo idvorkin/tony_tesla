@@ -219,6 +219,7 @@
     "serverMessages": ["function-call"],
     "dialKeypadFunctionEnabled": false,
     "endCallPhrases": ["bye for now", "talk soon", "hang up", "end call"],
-    "hipaaEnabled": false
+    "hipaaEnabled": false,
+    "maxDurationSeconds": 1200
   }
 }
