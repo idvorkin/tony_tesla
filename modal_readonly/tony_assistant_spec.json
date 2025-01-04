@@ -212,7 +212,7 @@
     "voicemailMessage": "Hi, you've reached Leo at SmartHome Innovations. Sorry I missed your call. Please leave a message, and I'll get back to you as soon as possible.",
     "endCallFunctionEnabled": true,
     "transcriber": {
-      "model": "nova-2",
+      "model": "nova-2-phonecall",
       "language": "en",
       "provider": "deepgram"
     },
@@ -220,6 +220,7 @@
     "dialKeypadFunctionEnabled": false,
     "endCallPhrases": ["bye for now", "talk soon", "hang up", "end call"],
     "hipaaEnabled": false,
-    "maxDurationSeconds": 1200
+    "maxDurationSeconds": 1200,
+    "backgroundDenoisingEnabled": true
   }
 }
