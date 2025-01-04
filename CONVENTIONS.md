@@ -291,3 +291,22 @@ When testing Textual TUI applications:
   content = widget.render()._renderable
   assert "expected text" in str(content)
   ```
+
+### Tony VAPI Configuration
+
+To get the latest Tony VAPI configuration settings:
+
+```bash
+tony export-vapi-tony-config
+```
+
+This command exports the current configuration which can be used as a reference for updating `tony_assistant_spec.json`. Key configuration areas include:
+
+- Voice settings (voiceId, provider, stability, similarityBoost)
+- Model configuration (model, maxTokens, temperature)
+- Server and client message types
+- End call settings and phrases
+- Transcriber configuration
+- Analysis plan settings
+
+When updating the configuration, ensure compatibility between the exported settings and your local `tony_assistant_spec.json`.
