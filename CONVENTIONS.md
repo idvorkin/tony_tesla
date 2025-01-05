@@ -352,7 +352,8 @@ Types for the summary line:
 ### Git Commit Best Practices
 
 Before committing changes:
-1. Run tests to ensure they pass, following the test instructions above:
+1. Review modified files using file reading capabilities rather than git diff
+2. Run tests to ensure they pass, following the test instructions above:
    - Run unit tests first
    - Use parallel execution with `pytest -n auto`
    - For iterating on specific tests, use the test file path:
@@ -360,9 +361,9 @@ Before committing changes:
      # Example: Run only the specific test you're working on
      pytest tests/integration/test_specific.py -v -k test_name
      ```
-2. Run `git status` to review all modified files
-3. Verify that only intended files are included
-4. Use `git add` to stage specific files rather than `git add .`
-5. Double-check staged files with `git status` again before committing
-6. For multi-file changes, ensure all related files are included (e.g., both implementation and tests)
-7. Exclude temporary files, logs, and other unrelated changes
+3. Run `git status` to review all modified files
+4. Verify that only intended files are included
+5. Use `git add` to stage specific files rather than `git add .`
+6. Double-check staged files with `git status` again before committing
+7. For multi-file changes, ensure all related files are included (e.g., both implementation and tests)
+8. Exclude temporary files, logs, and other unrelated changes
