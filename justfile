@@ -85,3 +85,8 @@ blog-search query="Untangled":
     http POST https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_search \
         x-vapi-secret:$TONY_API_KEY \
         query="{{query}}" | jq -r '.results[0].result | fromjson | .[] | "Title: \(.title)\nURL: \(.url)\nContent: \(.content)\n"'
+
+blog-info:
+    http POST https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_info \
+        x-vapi-secret:$TONY_API_KEY \
+        <<< '{}'
