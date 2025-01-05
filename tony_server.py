@@ -71,7 +71,7 @@ def parse_tool_call(function_name, params: Dict) -> FunctionCall:
             name=function_name,
             args=args
         )
-    
+
     # Handle complex format (used by VAPI)
     message = params["message"]
     ic(message.keys())
@@ -195,30 +195,26 @@ def get_caller_number(input: Dict) -> str | None:
     if input is None:
         ic("Input is None")
         return None
-        
+
     try:
         # Check each level of nesting and log if missing
-        if "input" not in input:
-            ic("Missing 'input' key")
-            return None
-            
-        if "message" not in input["input"]:
+        if "message" not in input:
             ic("Missing 'message' key")
             return None
-            
-        if "call" not in input["input"]["message"]:
+
+        if "call" not in input["message"]:
             ic("Missing 'call' key")
             return None
-            
-        if "customer" not in input["input"]["message"]["call"]:
+
+        if "customer" not in input["message"]["call"]:
             ic("Missing 'customer' key")
             return None
-            
-        if "number" not in input["input"]["message"]["call"]["customer"]:
+
+        if "number" not in input["message"]["call"]["customer"]:
             ic("Missing 'number' key")
             return None
-            
-        return input["input"]["message"]["call"]["customer"]["number"]
+
+        return input["message"]["call"]["customer"]["number"]
     except TypeError as e:
         ic(f"TypeError accessing nested dict: {e}")
         return None
@@ -237,7 +233,7 @@ def apply_caller_restrictions(tony: Dict, is_igor: bool) -> Dict:
             tool for tool in tony["assistant"]["model"]["tools"]
             if tool["function"]["name"] not in restricted_tools
         ]
-        
+
         # Add restriction notice to the system prompt
         current_prompt = tony["assistant"]["model"]["messages"][0]["content"]
         restriction_notice = """
@@ -250,7 +246,7 @@ You are talking to someone other than Igor. You must:
 </Restrictions>
 """
         tony["assistant"]["model"]["messages"][0]["content"] = restriction_notice + current_prompt
-    
+
     return tony
 
 @app.post("/assistant")
@@ -260,10 +256,10 @@ async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
     assistant_txt = (base / "tony_assistant_spec.json").read_text()
     tony = json.loads(assistant_txt)
     tony_prompt = (base / "tony_system_prompt.md").read_text()
-    
+
     # Check if caller is Igor
     is_igor = is_igor_caller(input)
-    
+
     # Add context to system prompt
     time_in_pst = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
     journal_content = trusted_journal_read() if is_igor else "Journal access restricted"
@@ -272,7 +268,7 @@ async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
 <CurrentState>
     Date and Time: {time_in_pst}
     Location: Seattle
-    Caller: {caller_number}
+    Phone Number if Asked: {caller_number}
     {f'<JournalContent>{journal_content}</JournalContent>' if is_igor else ''}
 </CurrentState>
     """

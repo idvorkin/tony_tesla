@@ -90,3 +90,6 @@ blog-info:
     http POST https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_info \
         x-vapi-secret:$TONY_API_KEY \
         <<< '{}'
+
+logs:
+    modal app logs modal-tony-server

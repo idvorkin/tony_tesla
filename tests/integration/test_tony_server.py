@@ -123,34 +123,32 @@ def test_vapi_assistant_call_input(auth_headers):
     """Test the VAPI assistant call input structure"""
     # Test parameters for assistant call
     params = {
-        "input": {
-            "message": {
-                "timestamp": 1736039875874,
-                "type": "assistant-request",
-                "call": {
-                    "id": "xxx-xxx",
-                    "orgId": "xxx-xxx",
-                    "createdAt": "2025-01-05T01:17:55.739Z",
-                    "updatedAt": "2025-01-05T01:17:55.739Z",
-                    "type": "inbound Phone Call",
-                    "status": "ringing",
-                    "phoneCallProvider": "twilio",
-                    "phoneCallProviderId": "xxx-xxx",
-                    "phoneCallTransport": "pstn",
-                    "phoneNumberId": "xxx-xxx",
-                    "assistantId": None,
-                    "squadId": None,
-                    "customer": {
+        "message": {
+            "timestamp": 1736039875874,
+            "type": "assistant-request",
+            "call": {
+                "id": "xxx-xxx",
+                "orgId": "xxx-xxx",
+                "createdAt": "2025-01-05T01:17:55.739Z",
+                "updatedAt": "2025-01-05T01:17:55.739Z",
+                "type": "inbound Phone Call",
+                "status": "ringing",
+                "phoneCallProvider": "twilio",
+                "phoneCallProviderId": "xxx-xxx",
+                "phoneCallTransport": "pstn",
+                "phoneNumberId": "xxx-xxx",
+                "assistantId": None,
+                "squadId": None,
+                "customer": {
+                    "number": "+1xxx-xxx",
+                    "phoneNumber": {
+                        "id": "xxx-xxx",
+                        "orgId": "xxx-xxx",
+                        "assistantId": None,
                         "number": "+1xxx-xxx",
-                        "phoneNumber": {
-                            "id": "xxx-xxx",
-                            "orgId": "xxx-xxx",
-                            "assistantId": None,
-                            "number": "+1xxx-xxx",
-                            "createdAt": "2024-04-12T16:35:14.400Z",
-                            "updatedAt": "2024-11-27T17:14:08.833Z",
-                            "provider": "twilio"
-                        }
+                        "createdAt": "2024-04-12T16:35:14.400Z",
+                        "updatedAt": "2024-11-27T17:14:08.833Z",
+                        "provider": "twilio"
                     }
                 }
             }
@@ -177,34 +175,32 @@ def test_vapi_assistant_call_input(auth_headers):
 def test_vapi_assistant_call_input_non_igor(auth_headers):
     """Test the VAPI assistant call input structure for non-Igor caller"""
     params = {
-        "input": {
-            "message": {
-                "timestamp": 1736039875874,
-                "type": "assistant-request",
-                "call": {
-                    "id": "xxx-xxx",
-                    "orgId": "xxx-xxx",
-                    "createdAt": "2025-01-05T01:17:55.739Z",
-                    "updatedAt": "2025-01-05T01:17:55.739Z",
-                    "type": "inbound Phone Call",
-                    "status": "ringing",
-                    "phoneCallProvider": "twilio",
-                    "phoneCallProviderId": "xxx-xxx",
-                    "phoneCallTransport": "pstn",
-                    "phoneNumberId": "xxx-xxx",
-                    "assistantId": None,
-                    "squadId": None,
-                    "customer": {
-                        "number": "+11234567890",  # Different number
-                        "phoneNumber": {
-                            "id": "xxx-xxx",
-                            "orgId": "xxx-xxx",
-                            "assistantId": None,
-                            "number": "+1xxx-xxx",
-                            "createdAt": "2024-04-12T16:35:14.400Z",
-                            "updatedAt": "2024-11-27T17:14:08.833Z",
-                            "provider": "twilio"
-                        }
+        "message": {
+            "timestamp": 1736039875874,
+            "type": "assistant-request",
+            "call": {
+                "id": "xxx-xxx",
+                "orgId": "xxx-xxx",
+                "createdAt": "2025-01-05T01:17:55.739Z",
+                "updatedAt": "2025-01-05T01:17:55.739Z",
+                "type": "inbound Phone Call",
+                "status": "ringing",
+                "phoneCallProvider": "twilio",
+                "phoneCallProviderId": "xxx-xxx",
+                "phoneCallTransport": "pstn",
+                "phoneNumberId": "xxx-xxx",
+                "assistantId": None,
+                "squadId": None,
+                "customer": {
+                    "number": "+11234567890",  # Different number
+                    "phoneNumber": {
+                        "id": "xxx-xxx",
+                        "orgId": "xxx-xxx",
+                        "assistantId": None,
+                        "number": "+1xxx-xxx",
+                        "createdAt": "2024-04-12T16:35:14.400Z",
+                        "updatedAt": "2024-11-27T17:14:08.833Z",
+                        "provider": "twilio"
                     }
                 }
             }
@@ -232,12 +228,10 @@ def test_is_igor_caller():
     """Test the is_igor_caller function"""
     # Test Igor's number
     igor_input = {
-        "input": {
-            "message": {
-                "call": {
-                    "customer": {
-                        "number": "+12068904339"
-                    }
+        "message": {
+            "call": {
+                "customer": {
+                    "number": "+12068904339"
                 }
             }
         }
@@ -246,12 +240,10 @@ def test_is_igor_caller():
 
     # Test different number
     other_input = {
-        "input": {
-            "message": {
-                "call": {
-                    "customer": {
-                        "number": "+11234567890"
-                    }
+        "message": {
+            "call": {
+                "customer": {
+                    "number": "+11234567890"
                 }
             }
         }
@@ -259,19 +251,17 @@ def test_is_igor_caller():
     assert is_igor_caller(other_input) is False
 
     # Test invalid input structure
-    invalid_input = {"input": {"message": {}}}
+    invalid_input = {"message": {}}
     assert is_igor_caller(invalid_input) is False
 
 def test_get_caller_number():
     """Test the get_caller_number function"""
     # Test valid input
     valid_input = {
-        "input": {
-            "message": {
-                "call": {
-                    "customer": {
-                        "number": "+12068904339"
-                    }
+        "message": {
+            "call": {
+                "customer": {
+                    "number": "+12068904339"
                 }
             }
         }
@@ -280,11 +270,9 @@ def test_get_caller_number():
 
     # Test missing number
     missing_number = {
-        "input": {
-            "message": {
-                "call": {
-                    "customer": {}
-                }
+        "message": {
+            "call": {
+                "customer": {}
             }
         }
     }
@@ -292,26 +280,20 @@ def test_get_caller_number():
 
     # Test missing customer
     missing_customer = {
-        "input": {
-            "message": {
-                "call": {}
-            }
+        "message": {
+            "call": {}
         }
     }
     assert get_caller_number(missing_customer) is None
 
     # Test missing call
     missing_call = {
-        "input": {
-            "message": {}
-        }
+        "message": {}
     }
     assert get_caller_number(missing_call) is None
 
     # Test missing message
-    missing_message = {
-        "input": {}
-    }
+    missing_message = {}
     assert get_caller_number(missing_message) is None
 
     # Test empty input
