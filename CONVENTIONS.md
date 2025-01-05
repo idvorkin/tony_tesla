@@ -348,3 +348,13 @@ Types for the summary line:
 - refactor: Code change that neither fixes a bug nor adds a feature
 - style: Changes that do not affect the meaning of the code
 - chore: Changes to the build process or auxiliary tools
+
+### Git Commit Best Practices
+
+Before committing changes:
+1. Run `git status` to review all modified files
+2. Verify that only intended files are included
+3. Use `git add` to stage specific files rather than `git add .`
+4. Double-check staged files with `git status` again before committing
+5. For multi-file changes, ensure all related files are included (e.g., both implementation and tests)
+6. Exclude temporary files, logs, and other unrelated changes
