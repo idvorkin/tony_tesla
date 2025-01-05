@@ -1,14 +1,42 @@
 import os
 import pytest
 from fastapi.testclient import TestClient
-from tony_server import app, parse_tool_call, make_vapi_response
+from tony_server import app, parse_tool_call, make_vapi_response, trusted_journal_read
 from blog_server import app as blog_app
 import json
+from unittest.mock import patch, Mock
+from pathlib import Path
 
 @pytest.fixture
 def auth_headers():
     """Fixture to provide authentication headers"""
     return {"x-vapi-secret": os.environ.get("TONY_API_KEY", "test_secret")}
+
+@pytest.fixture
+def mock_tony_files():
+    """Fixture to mock tony configuration files"""
+    mock_assistant_spec = {
+        "assistant": {
+            "name": "Tony",
+            "model": {
+                "messages": [{"role": "system", "content": "Test prompt"}],
+                "tools": []
+            },
+            "firstMessage": "Tony Here. What can I do you for?"
+        }
+    }
+    mock_system_prompt = "Test system prompt"
+
+    # Create a mock for Path.read_text
+    mock_read = Mock()
+    mock_read.return_value = json.dumps(mock_assistant_spec)  # Default to assistant spec
+    
+    # Create a mock for trusted_journal_read
+    mock_journal = Mock(return_value="Test journal content")
+
+    with patch('pathlib.Path.read_text', mock_read), \
+         patch('tony_server.trusted_journal_read', mock_journal):
+        yield
 
 @pytest.fixture
 def base_params():
@@ -102,3 +130,81 @@ def test_blog_search(auth_headers):
         assert "url" in first_result, "Expected 'url' in search result"
         assert "content" in first_result, "Expected 'content' in search result"
         assert first_result["url"].startswith("https://idvork.in"), "URL should start with https://idvork.in"
+
+@pytest.mark.usefixtures("mock_tony_files")
+def test_vapi_assistant_call_input(auth_headers):
+    """Test the VAPI assistant call input structure"""
+    # Test parameters for assistant call
+    params = {
+        "input": {
+            "message": {
+                "timestamp": 1736039875874,
+                "type": "assistant-request",
+                "call": {
+                    "id": "xxx-xxx",
+                    "orgId": "xxx-xxx",
+                    "createdAt": "2025-01-05T01:17:55.739Z",
+                    "updatedAt": "2025-01-05T01:17:55.739Z",
+                    "type": "inbound Phone Call",
+                    "status": "ringing",
+                    "phoneCallProvider": "twilio",
+                    "phoneCallProviderId": "xxx-xxx",
+                    "phoneCallTransport": "pstn",
+                    "phoneNumberId": "xxx-xxx",
+                    "assistantId": None,
+                    "squadId": None,
+                    "customer": {
+                        "number": "+1xxx-xxx",
+                        "phoneNumber": {
+                            "id": "xxx-xxx",
+                            "orgId": "xxx-xxx",
+                            "assistantId": None,
+                            "number": "+1xxx-xxx",
+                            "createdAt": "2024-04-12T16:35:14.400Z",
+                            "updatedAt": "2024-11-27T17:14:08.833Z",
+                            "stripeSubscriptionId": None,
+                            "twilioAccountSid": None,
+                            "twilioAuthToken": None,
+                            "stripeSubscriptionStatus": None,
+                            "stripeSubscriptionCurrentPeriodStart": None,
+                            "name": None,
+                            "credentialId": None,
+                            "serverUrl": None,
+                            "serverUrlSecret": None,
+                            "twilioOutgoingCallerId": None,
+                            "sipUri": None,
+                            "provider": "twilio",
+                            "fallbackForwardingPhoneNumber": None,
+                            "fallbackDestination": None,
+                            "squadId": None,
+                            "credentialIds": None,
+                            "numberE164CheckEnabled": None,
+                            "authentication": None,
+                            "server": None
+                        },
+                        "customer": {
+                            "number": "+1xxx-xxx"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    client = TestClient(app)
+    response = client.post("/assistant", json=params, headers=auth_headers)
+    
+    # Check response status and structure
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    
+    result = response.json()
+    
+    # Verify the response structure matches expected VAPI format
+    assert isinstance(result, dict), "Response should be a dictionary"
+    assert "assistant" in result, "Response should have 'assistant' key"
+    assert "model" in result["assistant"], "Response should have 'model' key in assistant"
+    assert "messages" in result["assistant"]["model"], "Response should have 'messages' in model"
+    assert isinstance(result["assistant"]["model"]["messages"], list), "Messages should be a list"
+    assert len(result["assistant"]["model"]["messages"]) > 0, "Should have at least one message"
+    assert "content" in result["assistant"]["model"]["messages"][0], "Message should have content"
+    assert isinstance(result["assistant"]["model"]["messages"][0]["content"], str), "Message content should be string"
