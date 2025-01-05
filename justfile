@@ -25,19 +25,10 @@ test-assistant-dev:
 test-read:
     http POST https://idvorkin--modal-tony-server-journal-read.modal.run date="the cat in the hat" \
         x-vapi-secret:$TONY_API_KEY \
+
 test-append:
     http POST https://idvorkin--modal-tony-server-journal-append.modal.run content="ignore this entry" \
         x-vapi-secret:$TONY_API_KEY \
-
-test-search:
-    http POST https://idvorkin--modal-tony-server-search.modal.run \
-        x-vapi-secret:$TONY_API_KEY \
-        question="What is the weather in moscow"
-
-test-search-dev:
-    http POST https://idvorkin--modal-tony-server-search-dev.modal.run \
-        x-vapi-secret:$TONY_API_KEY \
-        question="What is the weather in moscow"
 
 test-blog-info:
     http POST https://idvorkin--modal-blog-server-blog-handler.modal.run \
@@ -84,3 +75,13 @@ test-integration:
 
 test-e2e:
     pytest tests/e2e -n auto
+
+search query="what is the weather in seattle":
+    http POST https://idvorkin--modal-tony-server-fastapi-app.modal.run/search \
+        x-vapi-secret:$TONY_API_KEY \
+        question="{{query}}" | jq -r '.results[0].result'
+
+blog-search query="Untangled":
+    http POST https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_search \
+        x-vapi-secret:$TONY_API_KEY \
+        query="{{query}}" | jq -r '.results[0].result | fromjson | .[] | "Title: \(.title)\nURL: \(.url)\nContent: \(.content)\n"'
