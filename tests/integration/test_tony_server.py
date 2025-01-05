@@ -20,8 +20,8 @@ def mock_tony_files():
     # Create a mock for trusted_journal_read
     mock_journal = Mock(return_value="Test journal content")
 
-    # Only mock the system prompt and journal read, and adjust the modal_storage path
-    with patch('tony_server.modal_storage', 'modal_readonly'), \
+    # Mock the modal_storage path to point to the project's modal_readonly directory
+    with patch('tony_server.modal_storage', Path(__file__).parent.parent.parent / 'modal_readonly'), \
          patch('tony_server.trusted_journal_read', mock_journal):
         yield
 
