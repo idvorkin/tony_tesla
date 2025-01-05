@@ -325,3 +325,26 @@ When fixing tests, the goal is to be as efficient as possible. Here are some gui
   - Example: Use `pytest tests/unit/test_specific.py -v` to run a specific unit test.
   - For integration tests, use `pytest tests/integration/test_specific.py -v`.
   - For end-to-end tests, use `pytest tests/e2e/test_specific.py -v`.
+
+### Git Commit Messages
+
+When creating git commit messages:
+- Use multi-line messages for meaningful commits
+- First line is a summary (50 chars or less) starting with type: (e.g., "feat:", "fix:", "test:")
+- Leave a blank line after the summary
+- Follow with bullet points of specific changes
+
+Since the tools don't support direct newlines, use $' syntax with \n for multi-line messages:
+
+```bash
+git commit -m $'feat: Add new feature\n\n- Add X functionality\n- Update Y module\n- Fix Z issue'
+```
+
+Types for the summary line:
+- feat: New feature
+- fix: Bug fix
+- test: Adding or updating tests
+- docs: Documentation only changes
+- refactor: Code change that neither fixes a bug nor adds a feature
+- style: Changes that do not affect the meaning of the code
+- chore: Changes to the build process or auxiliary tools
