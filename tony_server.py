@@ -190,6 +190,40 @@ async def warm_up_endpoints(secret: str):
         # Execute calls without waiting for response
         await asyncio.gather(*tasks, return_exceptions=True)
 
+def is_igor_caller(input: Dict) -> bool:
+    """Check if the caller is Igor based on the phone number"""
+    try:
+        caller_number = input["input"]["message"]["call"]["customer"]["number"]
+        return caller_number == "+12068904339"
+    except (KeyError, TypeError):
+        return False
+
+def apply_caller_restrictions(tony: Dict, is_igor: bool) -> Dict:
+    """Apply restrictions to Tony's capabilities based on caller"""
+    if not is_igor:
+        # Remove sensitive tools for non-Igor callers
+        restricted_tools = ["journal_read", "journal_append", "library_arrivals"]
+        tony["assistant"]["model"]["tools"] = [
+            tool for tool in tony["assistant"]["model"]["tools"]
+            if tool["function"]["name"] not in restricted_tools
+        ]
+        
+        # Add restriction notice to the system prompt
+        current_prompt = tony["assistant"]["model"]["messages"][0]["content"]
+        restriction_notice = """
+<Restrictions>
+You are talking to someone other than Igor. You must:
+- Do not mention or acknowledge Igor's personal information
+- Do not offer or provide access to Igor's journal
+- Do not provide bus arrival information
+- Keep responses general and avoid mentioning specific details about Igor's life
+- You can still search and share Igor's public blog posts
+</Restrictions>
+"""
+        tony["assistant"]["model"]["messages"][0]["content"] = restriction_notice + current_prompt
+    
+    return tony
+
 @app.post("/assistant")
 async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
     ic(input)
@@ -197,21 +231,26 @@ async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
     assistant_txt = (base / "tony_assistant_spec.json").read_text()
     tony = json.loads(assistant_txt)
     tony_prompt = (base / "tony_system_prompt.md").read_text()
+    
+    # Check if caller is Igor
+    is_igor = is_igor_caller(input)
+    
     # Add context to system prompt
     time_in_pst = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
-    journal_content = trusted_journal_read()
+    journal_content = trusted_journal_read() if is_igor else "Journal access restricted"
     extra_state = f"""
 <CurrentState>
     Date and Time: {time_in_pst}
-    Igor's Location: Seattle
-    <JournalContent>
-        {journal_content}
-    </JournalContent>
+    Location: Seattle
+    {f'<JournalContent>{journal_content}</JournalContent>' if is_igor else ''}
 </CurrentState>
     """
     tony_prompt += extra_state
     # update system prompt
     tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
+
+    # Apply caller-based restrictions
+    tony = apply_caller_restrictions(tony, is_igor)
 
     secret = headers.get(X_VAPI_SECRET, "no secret passed to search")
     # Fire off warm-up calls without waiting
