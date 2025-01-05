@@ -190,19 +190,49 @@ async def warm_up_endpoints(secret: str):
         # Execute calls without waiting for response
         await asyncio.gather(*tasks, return_exceptions=True)
 
+def get_caller_number(input: Dict) -> str | None:
+    """Extract caller's phone number from input"""
+    if input is None:
+        ic("Input is None")
+        return None
+        
+    try:
+        # Check each level of nesting and log if missing
+        if "input" not in input:
+            ic("Missing 'input' key")
+            return None
+            
+        if "message" not in input["input"]:
+            ic("Missing 'message' key")
+            return None
+            
+        if "call" not in input["input"]["message"]:
+            ic("Missing 'call' key")
+            return None
+            
+        if "customer" not in input["input"]["message"]["call"]:
+            ic("Missing 'customer' key")
+            return None
+            
+        if "number" not in input["input"]["message"]["call"]["customer"]:
+            ic("Missing 'number' key")
+            return None
+            
+        return input["input"]["message"]["call"]["customer"]["number"]
+    except TypeError as e:
+        ic(f"TypeError accessing nested dict: {e}")
+        return None
+
 def is_igor_caller(input: Dict) -> bool:
     """Check if the caller is Igor based on the phone number"""
-    try:
-        caller_number = input["input"]["message"]["call"]["customer"]["number"]
-        return caller_number == "+12068904339"
-    except (KeyError, TypeError):
-        return False
+    caller_number = get_caller_number(input)
+    return caller_number == "+12068904339"
 
 def apply_caller_restrictions(tony: Dict, is_igor: bool) -> Dict:
     """Apply restrictions to Tony's capabilities based on caller"""
     if not is_igor:
         # Remove sensitive tools for non-Igor callers
-        restricted_tools = ["journal_read", "journal_append", "library_arrivals"]
+        restricted_tools = ["journal_read", "journal_append"]
         tony["assistant"]["model"]["tools"] = [
             tool for tool in tony["assistant"]["model"]["tools"]
             if tool["function"]["name"] not in restricted_tools
@@ -215,7 +245,6 @@ def apply_caller_restrictions(tony: Dict, is_igor: bool) -> Dict:
 You are talking to someone other than Igor. You must:
 - Do not mention or acknowledge Igor's personal information
 - Do not offer or provide access to Igor's journal
-- Do not provide bus arrival information
 - Keep responses general and avoid mentioning specific details about Igor's life
 - You can still search and share Igor's public blog posts
 </Restrictions>
@@ -238,10 +267,12 @@ async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
     # Add context to system prompt
     time_in_pst = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
     journal_content = trusted_journal_read() if is_igor else "Journal access restricted"
+    caller_number = get_caller_number(input) or "Unknown"
     extra_state = f"""
 <CurrentState>
     Date and Time: {time_in_pst}
     Location: Seattle
+    Caller: {caller_number}
     {f'<JournalContent>{journal_content}</JournalContent>' if is_igor else ''}
 </CurrentState>
     """
@@ -311,7 +342,7 @@ async def journal_append_endpoint(params: Dict, headers=Depends(get_headers)):
         break
     ic(first)
     journal_item = first
-    journal_item["content"] += f"{datetime.datetime.now()}: {call.args["content"]}\n"
+    journal_item["content"] += f'{datetime.datetime.now()}: {call.args["content"]}\n'
     ret = container.upsert_item(journal_item)
     ic(ret)
     return make_vapi_response(call, "success")

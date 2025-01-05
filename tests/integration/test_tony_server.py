@@ -1,7 +1,7 @@
 import os
 import pytest
 from fastapi.testclient import TestClient
-from tony_server import app, parse_tool_call, make_vapi_response, trusted_journal_read, is_igor_caller, apply_caller_restrictions
+from tony_server import app, parse_tool_call, make_vapi_response, trusted_journal_read, is_igor_caller, apply_caller_restrictions, get_caller_number
 from blog_server import app as blog_app
 import json
 from unittest.mock import patch, Mock
@@ -221,7 +221,7 @@ def test_vapi_assistant_call_input_non_igor(auth_headers):
     tool_names = [tool["function"]["name"] for tool in result["assistant"]["model"]["tools"]]
     assert "journal_read" not in tool_names, "Non-Igor should not have access to journal_read"
     assert "journal_append" not in tool_names, "Non-Igor should not have access to journal_append"
-    assert "library_arrivals" not in tool_names, "Non-Igor should not have access to library_arrivals"
+    assert "library_arrivals" in tool_names, "Non-Igor should have access to library_arrivals"
     
     # Verify restrictions are added to prompt
     messages = result["assistant"]["model"]["messages"]
@@ -262,6 +262,65 @@ def test_is_igor_caller():
     invalid_input = {"input": {"message": {}}}
     assert is_igor_caller(invalid_input) is False
 
+def test_get_caller_number():
+    """Test the get_caller_number function"""
+    # Test valid input
+    valid_input = {
+        "input": {
+            "message": {
+                "call": {
+                    "customer": {
+                        "number": "+12068904339"
+                    }
+                }
+            }
+        }
+    }
+    assert get_caller_number(valid_input) == "+12068904339"
+
+    # Test missing number
+    missing_number = {
+        "input": {
+            "message": {
+                "call": {
+                    "customer": {}
+                }
+            }
+        }
+    }
+    assert get_caller_number(missing_number) is None
+
+    # Test missing customer
+    missing_customer = {
+        "input": {
+            "message": {
+                "call": {}
+            }
+        }
+    }
+    assert get_caller_number(missing_customer) is None
+
+    # Test missing call
+    missing_call = {
+        "input": {
+            "message": {}
+        }
+    }
+    assert get_caller_number(missing_call) is None
+
+    # Test missing message
+    missing_message = {
+        "input": {}
+    }
+    assert get_caller_number(missing_message) is None
+
+    # Test empty input
+    empty_input = {}
+    assert get_caller_number(empty_input) is None
+
+    # Test None input
+    assert get_caller_number(None) is None
+
 def test_apply_caller_restrictions():
     """Test the apply_caller_restrictions function"""
     # Read the actual tony_assistant_spec.json
@@ -281,7 +340,7 @@ def test_apply_caller_restrictions():
     restricted_tool_names = [tool["function"]["name"] for tool in other_tony["assistant"]["model"]["tools"]]
     assert "journal_read" not in restricted_tool_names, "Non-Igor should not have access to journal_read"
     assert "journal_append" not in restricted_tool_names, "Non-Igor should not have access to journal_append"
-    assert "library_arrivals" not in restricted_tool_names, "Non-Igor should not have access to library_arrivals"
+    assert "library_arrivals" in restricted_tool_names, "Non-Igor should have access to library_arrivals"
     assert "search" in restricted_tool_names, "Non-Igor should still have access to search"
     assert "blog_info" in restricted_tool_names, "Non-Igor should still have access to blog_info"
     assert "blog_search" in restricted_tool_names, "Non-Igor should still have access to blog_search"
