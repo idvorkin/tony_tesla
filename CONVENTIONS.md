@@ -1,5 +1,9 @@
 # Coding conventions used in this project
 
+#
+
+Cursor rules are in CONVENTIONS.\*, before doing anythign else. Adding them to the context
+
 For CLIs, use a Typer app.
 Use `ic` for logging.
 Use Rich for pretty printing.
@@ -58,6 +62,7 @@ pytest -n auto
 This automatically detects the optimal number of CPU cores and distributes tests accordingly.
 
 For debugging specific tests, run without -n flag:
+
 ```bash
 pytest test_specific.py -v
 ```
@@ -65,27 +70,30 @@ pytest test_specific.py -v
 ### TUI Applications
 
 When creating TUI (Text User Interface) applications:
+
 - Use Textual library for TUI apps
 - Include standard key bindings:
   ```python
   BINDINGS = [
       Binding("q", "quit", "Quit"),
-      Binding("j", "move_down", "Down"), 
+      Binding("j", "move_down", "Down"),
       Binding("k", "move_up", "Up"),
       Binding("?", "help", "Help")
   ]
   ```
 - Include a Help screen modal that shows available commands
 - Use DataTable for tabular data display:
+
   - When accessing DataTable columns, handle ColumnKey objects by stripping wrapper text:
     ```python
-    columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
+    columns = [str(col).replace("ColumnKey('", "").replace("')", "")
               for col in table.columns.keys()]
     ```
   - Always include a key parameter when adding rows for selection tracking
   - Implement row selection handlers with `on_data_table_row_selected`
 
 - For modal screens:
+
   - Inherit from ModalScreen
   - Include proper styling in on_mount:
     ```python
@@ -101,18 +109,19 @@ When creating TUI (Text User Interface) applications:
   - Use Container for layout management
   - Include proper error handling with loguru
   - Follow this structure for the main app:
+
     ```python
     class MyTUIApp(App):
         # Define bindings
         # Define compose() for layout
         # Define action methods for commands
-    
+
     @app.command()
     def browse():
         """Browse data in an interactive TUI"""
         app = MyTUIApp()
         app.run()
-    
+
     @logger.catch()
     def app_wrap_loguru():
         app()
@@ -121,12 +130,13 @@ When creating TUI (Text User Interface) applications:
 ### TUI Applications
 
 When creating TUI (Text User Interface) applications:
+
 - Use Textual library for TUI apps
 - Include standard key bindings:
   ```python
   BINDINGS = [
       Binding("q", "quit", "Quit"),
-      Binding("j", "move_down", "Down"), 
+      Binding("j", "move_down", "Down"),
       Binding("k", "move_up", "Up"),
       Binding("?", "help", "Help")
   ]
@@ -137,18 +147,19 @@ When creating TUI (Text User Interface) applications:
 - Use Container for layout management
 - Include proper error handling with loguru
 - Follow this structure for the main app:
+
   ```python
   class MyTUIApp(App):
       # Define bindings
       # Define compose() for layout
       # Define action methods for commands
-  
+
   @app.command()
   def browse():
       """Browse data in an interactive TUI"""
       app = MyTUIApp()
       app.run()
-  
+
   @logger.catch()
   def app_wrap_loguru():
       app()
@@ -159,24 +170,26 @@ When creating TUI (Text User Interface) applications:
 When debugging, use the `ic` library:
 
 - Import ic at the top of files:
+
   ```python
   from icecream import ic
   ```
 
 - Use ic() to debug variables and expressions:
+
   ```python
   # Basic variable inspection
   ic(my_variable)
-  
+
   # Multiple variables
   ic(var1, var2, calculation_result)
-  
+
   # Expressions
   ic(table.columns, table.row_count)
-  
+
   # Objects and their properties
   ic(details.render()._renderable)
-  
+
   # Before/after state changes
   ic("Before action:", current_state)
   action()
@@ -184,10 +197,11 @@ When debugging, use the `ic` library:
   ```
 
 - For test debugging, combine ic with print statements for context:
+
   ```python
   print("\nDEBUG: Starting test")
   ic(test_object)
-  
+
   # Show test progress
   print("\nDEBUG: After action")
   ic(result)
@@ -205,11 +219,13 @@ When debugging, use the `ic` library:
 When testing Textual TUI applications:
 
 - Use pytest-asyncio and mark tests:
+
   ```python
   pytestmark = pytest.mark.asyncio
   ```
 
 - Include standard test fixtures:
+
   ```python
   @pytest.fixture
   async def app():
@@ -218,6 +234,7 @@ When testing Textual TUI applications:
   ```
 
 - Use app.run_test() context manager:
+
   ```python
   async def test_something(app):
       async with app.run_test() as pilot:
@@ -225,14 +242,15 @@ When testing Textual TUI applications:
   ```
 
 - Add comprehensive debugging:
+
   ```python
   # Debug widget tree
   print(f"DEBUG: App widgets: {app.query('*')}")
-  
+
   # Debug specific components
   table = app.query_one(DataTable)
   print(f"Table properties: {table.columns}")
-  
+
   # Debug events and state changes
   print(f"Before action: {current_state}")
   await pilot.press("key")
@@ -240,17 +258,20 @@ When testing Textual TUI applications:
   ```
 
 - Test widget queries and selections:
+
   ```python
   table = app.query_one(DataTable)
   details = app.query_one("#details", Static)
   ```
 
 - Allow time for UI updates:
+
   ```python
   await pilot.pause()
   ```
 
 - Test modal screens:
+
   ```python
   await pilot.press("?")  # Open modal
   assert isinstance(app.screen, HelpScreen)
@@ -258,9 +279,10 @@ When testing Textual TUI applications:
   ```
 
 - Test DataTable operations:
+
   - Extract column information:
     ```python
-    columns = [str(col).replace("ColumnKey('", "").replace("')", "") 
+    columns = [str(col).replace("ColumnKey('", "").replace("')", "")
               for col in table.columns.keys()]
     ```
   - Test row selection:
@@ -270,6 +292,7 @@ When testing Textual TUI applications:
     ```
 
 - Include error handling in tests:
+
   ```python
   try:
       # Test code
@@ -280,6 +303,7 @@ When testing Textual TUI applications:
   ```
 
 - Test keyboard navigation:
+
   ```python
   await pilot.press("j")  # Down
   await pilot.press("k")  # Up
@@ -329,6 +353,7 @@ When fixing tests, the goal is to be as efficient as possible. Here are some gui
 ### Git Commit Messages
 
 When creating git commit messages:
+
 - Use multi-line messages for meaningful commits
 - First line is a summary (50 chars or less) starting with type: (e.g., "feat:", "fix:", "test:")
 - Leave a blank line after the summary
@@ -341,6 +366,7 @@ git commit -m $'feat: Add new feature\n\n- Add X functionality\n- Update Y modul
 ```
 
 Types for the summary line:
+
 - feat: New feature
 - fix: Bug fix
 - test: Adding or updating tests
@@ -352,6 +378,7 @@ Types for the summary line:
 ### Git Commit Best Practices
 
 Before committing changes:
+
 1. Review modified files using file reading capabilities rather than git diff
 2. Run tests to ensure they pass, following the test instructions above:
    - Run unit tests first
