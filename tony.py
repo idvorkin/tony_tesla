@@ -1,20 +1,18 @@
 #!python3
 
-
 import asyncio
 import os
-import tempfile
 
 from typing import Annotated
 from langchain_core import messages
 from pydantic import BaseModel
+from langchain_openai import ChatOpenAI
 
 import typer
 from langchain.prompts import ChatPromptTemplate
 
 from loguru import logger
 from rich.console import Console
-import langchain_helper
 import httpx
 from icecream import ic
 from datetime import datetime, timedelta
@@ -48,16 +46,16 @@ Parse them with a function call
 
 
 class CallSummary(BaseModel):
-    Notes: str
-    Reminders: list[str]
-    JournalEntry: list[str]
-    CompletedHabits: list[str]
-    CallSummary: list[str]
+    Notes: str = ""
+    Reminders: list[str] = []
+    JournalEntry: list[str] = []
+    CompletedHabits: list[str] = []
+    CallSummary: list[str] = []
 
 
 class Call(BaseModel):
     id: str
-    Caller: str 
+    Caller: str
     Transcript: str
     Summary: str
     Start: datetime
@@ -71,10 +69,10 @@ class Call(BaseModel):
 
 def parse_call(call) -> Call:
     """Parse a VAPI call response into a Call model.
-    
+
     Args:
         call: Raw call data from VAPI API
-        
+
     Returns:
         Call: Parsed call data with standardized fields
     """
@@ -89,8 +87,8 @@ def parse_call(call) -> Call:
 
     # Parse timestamps and convert to local timezone
     start_dt = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%S.%fZ")
-    end_dt = datetime.strptime(ended_at, "%Y-%m-%dT%H:%M:%S.%fZ") 
-    
+    end_dt = datetime.strptime(ended_at, "%Y-%m-%dT%H:%M:%S.%fZ")
+
     # Convert UTC to local timezone
     start_dt = start_dt.replace(tzinfo=tz.tzutc()).astimezone(tz.tzlocal())
     end_dt = end_dt.replace(tzinfo=tz.tzutc()).astimezone(tz.tzlocal())
@@ -114,7 +112,7 @@ def parse_call(call) -> Call:
         End=end_dt,
         Summary=summary,
         Cost=cost,
-        CostBreakdown=cost_breakdown
+        CostBreakdown=cost_breakdown,
     )
 
 
@@ -156,7 +154,7 @@ weather:
 
 @app.command()
 def calls(
-    costs: Annotated[bool, typer.Option(help="Show detailed cost breakdown")] = False
+    costs: Annotated[bool, typer.Option(help="Show detailed cost breakdown")] = False,
 ):
     """List all recent VAPI calls with their details."""
     calls = vapi_calls()
@@ -164,7 +162,9 @@ def calls(
     total_cost = 0.0
     for call in calls:
         start = call.Start.strftime("%Y-%m-%d %H:%M")
-        print(f"Call: {call.Caller} at {start} ({call.length_in_seconds():.0f}s, {len(call.Transcript)} chars) ${call.Cost:.3f}")
+        print(
+            f"Call: {call.Caller} at {start} ({call.length_in_seconds():.0f}s, {len(call.Transcript)} chars) ${call.Cost:.3f}"
+        )
         total_cost += call.Cost
         if costs:
             # Display cost breakdown components
@@ -176,15 +176,19 @@ def calls(
                 print(f"    LLM: ${breakdown.get('llm', 0):.3f}")
                 print(f"    Text-to-Speech: ${breakdown.get('tts', 0):.3f}")
                 print(f"    VAPI: ${breakdown.get('vapi', 0):.3f}")
-                if 'analysisCostBreakdown' in breakdown:
-                    analysis = breakdown['analysisCostBreakdown']
+                if "analysisCostBreakdown" in breakdown:
+                    analysis = breakdown["analysisCostBreakdown"]
                     print("    Analysis Costs:")
                     print(f"      Summary: ${analysis.get('summary', 0):.3f}")
-                    print(f"      Structured Data: ${analysis.get('structuredData', 0):.3f}")
-                    print(f"      Success Evaluation: ${analysis.get('successEvaluation', 0):.3f}")
+                    print(
+                        f"      Structured Data: ${analysis.get('structuredData', 0):.3f}"
+                    )
+                    print(
+                        f"      Success Evaluation: ${analysis.get('successEvaluation', 0):.3f}"
+                    )
         print(f"  Summary: {call.Summary}")
         print()
-    
+
     if costs:
         print(f"\nTotal cost: ${total_cost:.3f}")
 
@@ -213,7 +217,7 @@ def dump_last_call():
     if not calls:
         print("No calls found")
         return
-        
+
     # Get most recent call's complete data and print it
     print(json.dumps(calls[0], indent=2))
 
@@ -267,12 +271,7 @@ def parse_calls(
     trace: bool = False,
 ):
     """Parse and analyze recent calls for todos and reminders."""
-    langchain_helper.langsmith_trace_if_requested(
-        trace, lambda: asyncio.run(a_parse_calls())
-    )
-
-
-
+    asyncio.run(a_parse_calls())
 
 
 @app.command()
@@ -293,11 +292,11 @@ def local_parse_config():
 
 async def a_parse_calls():
     async def transcribe_call(user_text):
-        llm = langchain_helper.get_model(openai=True)
-        callSummary: CallSummary = await (
+        llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        result = await (
             prompt_transcribe_call(user_text) | llm.with_structured_output(CallSummary)
-        ).ainvoke({})  # type:ignore
-        return callSummary
+        ).ainvoke({})
+        return CallSummary(**result) if isinstance(result, dict) else result
 
     calls = vapi_calls()
 
