@@ -310,3 +310,18 @@ This command exports the current configuration which can be used as a reference 
 - Analysis plan settings
 
 When updating the configuration, ensure compatibility between the exported settings and your local `tony_assistant_spec.json`.
+
+- Use `uv` instead of `pip` for package management.
+- Ensure to update dependencies in `pyproject.toml` when adding new packages or updating existing ones.
+
+### Fixing Tests
+
+When fixing tests, the goal is to be as efficient as possible. Here are some guidelines:
+
+- **Unit Tests First**: Ensure unit tests pass before moving on to integration tests.
+- **Integration Before E2E**: Run integration tests before end-to-end tests to catch issues early.
+- **Parallel Execution**: Run tests in parallel to save time.
+- **Iterate on Failing Tests**: If iterating on a failing test, only run that specific test instead of the entire suite.
+  - Example: Use `pytest tests/unit/test_specific.py -v` to run a specific unit test.
+  - For integration tests, use `pytest tests/integration/test_specific.py -v`.
+  - For end-to-end tests, use `pytest tests/e2e/test_specific.py -v`.
