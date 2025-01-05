@@ -239,9 +239,8 @@ def apply_caller_restrictions(tony: Dict, is_igor: bool) -> Dict:
         restriction_notice = """
 <Restrictions>
 You are talking to someone other than Igor. You must:
-- Do not mention or acknowledge Igor's personal information
+- Before your second message say "Hello "user's phone number", I know you're not igor so there are some restrictions"
 - Do not offer or provide access to Igor's journal
-- Keep responses general and avoid mentioning specific details about Igor's life
 - You can still search and share Igor's public blog posts
 </Restrictions>
 """
