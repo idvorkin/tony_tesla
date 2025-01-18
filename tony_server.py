@@ -4,12 +4,10 @@
 import datetime
 import json
 import os
-import random
 import uuid
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 from zoneinfo import ZoneInfo
-from pydantic import BaseModel, Field
 import httpx
 import asyncio
 
@@ -20,7 +18,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request, status
 from icecream import ic
 
 # import asyncio
-from modal import App, Image, Mount, Secret, web_endpoint, asgi_app
+from modal import App, Image, Mount, Secret, asgi_app
+
 
 # Configure icecream to truncate long output
 def truncate_value(obj):
@@ -29,7 +28,8 @@ def truncate_value(obj):
         return str_val[:2000] + "..."
     return str_val
 
-ic.configureOutput(prefix='', outputFunction=print)
+
+ic.configureOutput(prefix="", outputFunction=print)
 ic.configureOutput(argToStringFunction=truncate_value)
 
 PPLX_API_KEY_NAME = "PPLX_API_KEY"
@@ -40,7 +40,14 @@ X_VAPI_SECRET = "x-vapi-secret"
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
 default_image = Image.debian_slim(python_version="3.12").pip_install(
-    ["icecream", "requests", "pydantic", "azure-cosmos", "onebusaway", "fastapi[standard]"]
+    [
+        "icecream",
+        "requests",
+        "pydantic",
+        "azure-cosmos",
+        "onebusaway",
+        "fastapi[standard]",
+    ]
 )
 
 
@@ -49,28 +56,28 @@ modal_app = App("modal-tony-server")
 
 modal_storage = "modal_readonly"
 
+
 class FunctionCall(pydantic.BaseModel):
     id: str
     name: str
     args: Dict
 
+
 def make_vapi_response(call: FunctionCall, result: str):
     return {"results": [{"toolCallId": call.id, "result": result}]}
+
 
 def make_call(name, input: Dict):
     id = input.get("id", str(uuid.uuid4()))
     return FunctionCall(id=id, name=name, args=input)
+
 
 def parse_tool_call(function_name, params: Dict) -> FunctionCall:
     """Parse the call from VAPI or from the test tool."""
     # Handle simple format (used in tests and justfile commands)
     if not params.get("message"):
         args = {k: v for k, v in params.items() if v is not None}
-        return FunctionCall(
-            id=str(uuid.uuid4()),
-            name=function_name,
-            args=args
-        )
+        return FunctionCall(id=str(uuid.uuid4()), name=function_name, args=args)
 
     # Handle complex format (used by VAPI)
     message = params["message"]
@@ -86,6 +93,7 @@ def parse_tool_call(function_name, params: Dict) -> FunctionCall:
         args=tool["function"]["arguments"],
     )
 
+
 def raise_if_not_authorized(headers: Dict):
     token = headers.get(X_VAPI_SECRET, "")
     if not token:
@@ -96,6 +104,7 @@ def raise_if_not_authorized(headers: Dict):
             detail="Incorrect bearer token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
 
 def search_logic(params: Dict, headers: Dict):
     """Core search logic used by both Modal and FastAPI endpoints"""
@@ -128,11 +137,13 @@ def search_logic(params: Dict, headers: Dict):
     ic(vapi_response)
     return vapi_response
 
+
 DB_HOST = "https://tonyserver.documents.azure.com:443/"
 DATABASE_ID = "grateful"
 CONTAINER_ID = "main"
 JOURNAL_DATABASE_ID = "journal"
 JOURNAL_ID_CONTAINER = "journal_container"
+
 
 def trusted_journal_read():
     client = cosmos_client.CosmosClient(
@@ -152,6 +163,7 @@ def trusted_journal_read():
     content = first["content"]
     return content
 
+
 def get_headers(request: Request):
     ic(dict(request.headers))
     return request.headers
@@ -165,30 +177,34 @@ async def warm_up_endpoints(secret: str):
 
         # Prepare warm-up calls
         tasks = [
-            client.post(f"{base_url}-search.modal.run",
-                       json={"question": "warm up"},
-                       headers=headers),
-            client.post(f"{base_url}-library-arrivals.modal.run",
-                       json={},
-                       headers=headers),
-            client.post("https://idvorkin--modal-blog-server-blog-handler.modal.run",
-                       json={
-                           "message": {
-                               "toolCalls": [{
-                                   "function": {
-                                       "name": "blog_info",
-                                       "arguments": {}
-                                   },
-                                   "id": "warm-up",
-                                   "type": "function"
-                               }]
-                           }
-                       },
-                       headers=headers)
+            client.post(
+                f"{base_url}-search.modal.run",
+                json={"question": "warm up"},
+                headers=headers,
+            ),
+            client.post(
+                f"{base_url}-library-arrivals.modal.run", json={}, headers=headers
+            ),
+            client.post(
+                "https://idvorkin--modal-blog-server-blog-handler.modal.run",
+                json={
+                    "message": {
+                        "toolCalls": [
+                            {
+                                "function": {"name": "blog_info", "arguments": {}},
+                                "id": "warm-up",
+                                "type": "function",
+                            }
+                        ]
+                    }
+                },
+                headers=headers,
+            ),
         ]
 
         # Execute calls without waiting for response
         await asyncio.gather(*tasks, return_exceptions=True)
+
 
 def get_caller_number(input: Dict) -> str | None:
     """Extract caller's phone number from input"""
@@ -219,10 +235,12 @@ def get_caller_number(input: Dict) -> str | None:
         ic(f"TypeError accessing nested dict: {e}")
         return None
 
+
 def is_igor_caller(input: Dict) -> bool:
     """Check if the caller is Igor based on the phone number"""
     caller_number = get_caller_number(input)
     return caller_number == "+12068904339"
+
 
 def apply_caller_restrictions(tony: Dict, is_igor: bool) -> Dict:
     """Apply restrictions to Tony's capabilities based on caller"""
@@ -230,7 +248,8 @@ def apply_caller_restrictions(tony: Dict, is_igor: bool) -> Dict:
         # Remove sensitive tools for non-Igor callers
         restricted_tools = ["journal_read", "journal_append"]
         tony["assistant"]["model"]["tools"] = [
-            tool for tool in tony["assistant"]["model"]["tools"]
+            tool
+            for tool in tony["assistant"]["model"]["tools"]
             if tool["function"]["name"] not in restricted_tools
         ]
 
@@ -244,9 +263,39 @@ You are talking to someone other than Igor. You must:
 - You can still search and share Igor's public blog posts
 </Restrictions>
 """
-        tony["assistant"]["model"]["messages"][0]["content"] = restriction_notice + current_prompt
+        tony["assistant"]["model"]["messages"][0]["content"] = (
+            restriction_notice + current_prompt
+        )
 
     return tony
+
+
+def extract_failure_reason(input: Dict) -> str | None:
+    """Extract failure reason from a status-update message"""
+    if not input.get("message"):
+        return None
+
+    message = input["message"]
+    if message.get("type") != "status-update":
+        return None
+
+    if message.get("status") != "ended":
+        return None
+
+    # Get the debugging artifacts if they exist
+    debugging = message.get("inboundPhoneCallDebuggingArtifacts", {})
+
+    # First try to get the assistant request error
+    if debugging.get("assistantRequestError"):
+        return debugging["assistantRequestError"]
+
+    # Fallback to the general error
+    if debugging.get("error"):
+        return debugging["error"]
+
+    # Finally fallback to the ended reason
+    return message.get("endedReason")
+
 
 @app.post("/assistant")
 async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
@@ -255,6 +304,9 @@ async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
     assistant_txt = (base / "tony_assistant_spec.json").read_text()
     tony = json.loads(assistant_txt)
     tony_prompt = (base / "tony_system_prompt.md").read_text()
+
+    if failure_reason := extract_failure_reason(input):
+        ic(failure_reason)
 
     # Check if caller is Igor
     is_igor = is_igor_caller(input)
@@ -288,10 +340,12 @@ async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
     ic(len(tony))
     return tony
 
+
 @app.post("/search")
 async def search_endpoint(params: Dict, headers=Depends(get_headers)):
     """Modal endpoint for search"""
     return search_logic(params, headers)
+
 
 @app.post("/library-arrivals")
 async def library_arrivals_endpoint(params: Dict, headers=Depends(get_headers)):
@@ -316,6 +370,7 @@ async def library_arrivals_endpoint(params: Dict, headers=Depends(get_headers)):
     vapi_response = make_vapi_response(call, str(arrivals))
     ic(vapi_response)
     return vapi_response
+
 
 @app.post("/journal-append")
 async def journal_append_endpoint(params: Dict, headers=Depends(get_headers)):
@@ -342,12 +397,14 @@ async def journal_append_endpoint(params: Dict, headers=Depends(get_headers)):
     ic(ret)
     return make_vapi_response(call, "success")
 
+
 @app.post("/journal-read")
 async def journal_read_endpoint(params: Dict, headers=Depends(get_headers)):
     raise_if_not_authorized(headers)
     call = parse_tool_call("journal_read", params)
     content = trusted_journal_read()
     return make_vapi_response(call, f"{content}")
+
 
 @modal_app.function(
     image=default_image.pip_install(["httpx"]),
@@ -362,4 +419,3 @@ async def journal_read_endpoint(params: Dict, headers=Depends(get_headers)):
 @asgi_app()
 def fastapi_app():
     return app
-
