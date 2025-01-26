@@ -93,3 +93,6 @@ blog-info:
 
 logs:
     modal app logs modal-tony-server
+default:
+    @echo "Available actions:"
+    @just --list
