@@ -3,6 +3,9 @@
 set export
 tony_server := "tony_server.py"
 
+default:
+    @just --list
+
 install:
     uv pip install --editable .
 
@@ -70,7 +73,7 @@ test-coverage:
 test-unit:
     pytest tests/unit -n auto
 
-test-integration: 
+test-integration:
     pytest tests/integration -n auto --dist loadscope -v
 
 test-e2e:
@@ -93,5 +96,4 @@ blog-info:
 
 logs:
     modal app logs modal-tony-server
-default:
-    @just --list
+
