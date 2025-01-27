@@ -1,4 +1,4 @@
-# what is the syntax here - is it just toml
+#!python3
 
 set export
 tony_server := "tony_server.py"
@@ -10,7 +10,7 @@ install:
     uv pip install --editable .
 
 global-install: install
-    pipxu install -f . --editable --python $(which python3.12)
+    uv tool install --force --editable .
 
 run-dev-server:
     modal serve {{tony_server}}::modal_app
@@ -82,12 +82,12 @@ test-e2e:
 search query="what is the weather in seattle":
     http POST https://idvorkin--modal-tony-server-fastapi-app.modal.run/search \
         x-vapi-secret:$TONY_API_KEY \
-        question="{{query}}" | jq -r '.results[0].result'
+        question="{{query}}" | jq -r '.results[0].result' | /bin/cat
 
 blog-search query="Untangled":
     http POST https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_search \
         x-vapi-secret:$TONY_API_KEY \
-        query="{{query}}" | jq -r '.results[0].result | fromjson | .[] | "Title: \(.title)\nURL: \(.url)\nContent: \(.content)\n"'
+        query="{{query}}" | jq -r '.results[0].result | fromjson | .[] | "Title: \(.title)\nURL: \(.url)\nContent: \(.content)\n"' | /bin/cat
 
 blog-info:
     http POST https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_info \
@@ -95,5 +95,5 @@ blog-info:
         <<< '{}'
 
 logs:
-    modal app logs modal-tony-server
+    modal app logs modal-tony-server | /bin/cat
 
