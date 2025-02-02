@@ -329,7 +329,8 @@ def search(
         "question": query
     }
     
-    response = httpx.post(url, headers=headers, json=data)
+    # Increase timeout to 30 seconds
+    response = httpx.post(url, headers=headers, json=data, timeout=30.0)
     
     if response.status_code == 200:
         results = response.json()
