@@ -7,6 +7,7 @@ from typing import Annotated
 from langchain_core import messages
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
+import httpx
 
 import typer
 from langchain.prompts import ChatPromptTemplate
@@ -310,6 +311,38 @@ async def a_parse_calls():
         call_summary = await transcribe_call(call.Transcript)
         print(call_summary)
 
+
+@app.command()
+def search(
+    query: Annotated[str, typer.Argument(help="The search query to send")],
+    url: Annotated[
+        str, 
+        typer.Option(
+            help="The search endpoint URL",
+            default="https://idvorkin--modal-tony-server-fastapi-app.modal.run/search"
+        )
+    ] = "https://idvorkin--modal-tony-server-fastapi-app.modal.run/search",
+):
+    """Search using Tony's search endpoint."""
+    headers = {
+        "x-vapi-secret": os.environ["TONY_API_KEY"]
+    }
+    
+    data = {
+        "question": query
+    }
+    
+    response = httpx.post(url, headers=headers, json=data)
+    
+    if response.status_code == 200:
+        results = response.json()
+        if results and "results" in results and results["results"]:
+            print(results["results"][0]["result"])
+        else:
+            print("No results found")
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
 
 if __name__ == "__main__":
     app_wrap_loguru()
