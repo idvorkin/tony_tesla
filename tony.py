@@ -317,11 +317,8 @@ def search(
     query: Annotated[str, typer.Argument(help="The search query to send")],
     url: Annotated[
         str, 
-        typer.Option(
-            help="The search endpoint URL",
-            default="https://idvorkin--modal-tony-server-fastapi-app.modal.run/search"
-        )
-    ],
+        typer.Option(help="The search endpoint URL")
+    ] = "https://idvorkin--modal-tony-server-fastapi-app.modal.run/search",
 ):
     """Search using Tony's search endpoint."""
     headers = {
