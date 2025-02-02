@@ -321,7 +321,7 @@ def search(
             help="The search endpoint URL",
             default="https://idvorkin--modal-tony-server-fastapi-app.modal.run/search"
         )
-    ] = "https://idvorkin--modal-tony-server-fastapi-app.modal.run/search",
+    ],
 ):
     """Search using Tony's search endpoint."""
     headers = {
