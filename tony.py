@@ -342,5 +342,39 @@ def search(
         print(f"Error: {response.status_code}")
         print(response.text)
 
+
+@app.command()
+def send_text(
+    text: Annotated[str, typer.Argument(help="The text message to send")],
+    to_number: Annotated[str, typer.Argument(help="The phone number to send the text to")],
+    url: Annotated[
+        str, 
+        typer.Option(help="The send-text endpoint URL")
+    ] = "https://idvorkin--modal-tony-server-fastapi-app.modal.run/send-text",
+):
+    """Send a text message using Tony's send-text endpoint."""
+    headers = {
+        "x-vapi-secret": os.environ["TONY_API_KEY"]
+    }
+    
+    data = {
+        "text": text,
+        "to_number": to_number
+    }
+    
+    # Increase timeout to 30 seconds
+    response = httpx.post(url, headers=headers, json=data, timeout=30.0)
+    
+    if response.status_code == 200:
+        results = response.json()
+        if results and "results" in results and results["results"]:
+            print(results["results"][0]["result"])
+        else:
+            print("No results found")
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+
+
 if __name__ == "__main__":
     app_wrap_loguru()

@@ -104,3 +104,27 @@ def test_assistant_e2e(auth_headers, base_params):
     assert isinstance(result["assistant"], dict), "Expected 'assistant' to be a dictionary."
     assert "firstMessage" in result["assistant"], "Expected 'firstMessage' in assistant response."
     assert isinstance(result["assistant"]["firstMessage"], str), "Expected 'firstMessage' to be a string."
+
+def test_send_text():
+    """Test the send-text endpoint"""
+    url = "https://idvorkin--modal-tony-server-fastapi-app.modal.run/send-text"
+    headers = {"x-vapi-secret": os.environ["TONY_API_KEY"]}
+    
+    # Test with valid parameters
+    params = {
+        "text": "Hello, this is a test message",
+        "to_number": "+12068904339"
+    }
+    response = make_request(url, params, headers)
+    assert response.status_code == 200
+    result = response.json()
+    assert "results" in result
+    assert len(result["results"]) > 0
+    assert "text message sent" in result["results"][0]["result"].lower()
+    
+    # Test with missing parameters
+    params = {"text": "Hello"}  # Missing to_number
+    response = make_request(url, params, headers)
+    assert response.status_code == 200
+    result = response.json()
+    assert "error" in result["results"][0]["result"].lower()

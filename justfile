@@ -79,6 +79,12 @@ test-integration:
 test-e2e:
     pytest tests/e2e -n auto
 
+test-send-text:
+    http POST https://idvorkin--modal-tony-server-fastapi-app.modal.run/send-text \
+        x-vapi-secret:$TONY_API_KEY \
+        text="Test message" \
+        to_number="+12068904339"
+
 search query="what is the weather in seattle":
     http POST https://idvorkin--modal-tony-server-fastapi-app.modal.run/search \
         x-vapi-secret:$TONY_API_KEY \

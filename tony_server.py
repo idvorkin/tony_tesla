@@ -19,6 +19,7 @@ from icecream import ic
 
 # import asyncio
 from modal import App, Image, Mount, Secret, asgi_app
+from pydantic import BaseModel
 
 
 # Configure icecream to truncate long output
@@ -36,6 +37,9 @@ PPLX_API_KEY_NAME = "PPLX_API_KEY"
 TONY_API_KEY_NAME = "TONY_API_KEY"
 ONEBUSAWAY_API_KEY = "ONEBUSAWAY_API_KEY"
 TONY_STORAGE_SERVER_API_KEY = "TONY_STORAGE_SERVER_API_KEY"
+TWILIO_ACCOUNT_SID = "TWILIO_ACCOUNT_SID"
+TWILIO_AUTH_TOKEN = "TWILIO_AUTH_TOKEN"
+TWILIO_FROM_NUMBER = "TWILIO_FROM_NUMBER"
 X_VAPI_SECRET = "x-vapi-secret"
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
@@ -47,6 +51,7 @@ default_image = Image.debian_slim(python_version="3.12").pip_install(
         "azure-cosmos",
         "onebusaway",
         "fastapi[standard]",
+        "twilio",
     ]
 )
 
@@ -406,6 +411,78 @@ async def journal_read_endpoint(params: Dict, headers=Depends(get_headers)):
     return make_vapi_response(call, f"{content}")
 
 
+class TextMessageRequest(BaseModel):
+    text: str
+    to_number: str
+
+
+@app.post("/send-text")
+async def send_text_endpoint(params: Dict, headers=Depends(get_headers)):
+    """Modal endpoint for sending text messages using Twilio"""
+    from twilio.rest import Client
+    from twilio.base.exceptions import TwilioRestException
+
+    raise_if_not_authorized(headers)
+    call = parse_tool_call("send_text", params)
+    
+    # Extract text and to_number from the call arguments
+    text = call.args.get("text")
+    to_number = call.args.get("to_number")
+    
+    if not text or not to_number:
+        error_msg = "Both text and to_number are required"
+        return make_vapi_response(call, f"Error: {error_msg}")
+    
+    try:
+        # Log Twilio environment variables (without sensitive data)
+        ic("Twilio environment check:")
+        ic("TWILIO_ACCOUNT_SID exists:", TWILIO_ACCOUNT_SID in os.environ)
+        ic("TWILIO_AUTH_TOKEN exists:", TWILIO_AUTH_TOKEN in os.environ)
+        ic("TWILIO_FROM_NUMBER exists:", TWILIO_FROM_NUMBER in os.environ)
+        ic("TWILIO_FROM_NUMBER value:", os.environ.get(TWILIO_FROM_NUMBER))
+        
+        # Initialize Twilio client
+        client = Client(
+            os.environ[TWILIO_ACCOUNT_SID],
+            os.environ[TWILIO_AUTH_TOKEN]
+        )
+        
+        # Log the message parameters
+        ic("Sending message with params:")
+        ic("To:", to_number)
+        ic("From:", os.environ[TWILIO_FROM_NUMBER])
+        ic("Text:", text)
+        
+        # Send message
+        message = client.messages.create(
+            body=text,
+            from_=os.environ[TWILIO_FROM_NUMBER],
+            to=to_number
+        )
+        
+        # Log the Twilio response
+        ic("Twilio response:", message.__dict__)
+        
+        # Return success response with message SID
+        return make_vapi_response(
+            call, 
+            f"Text message sent to {to_number}: {text} (Message SID: {message.sid})"
+        )
+        
+    except TwilioRestException as e:
+        error_msg = f"Failed to send message: {str(e)}"
+        ic(error_msg)  # Log the error
+        return make_vapi_response(call, f"Error: {error_msg}")
+    except KeyError as e:
+        error_msg = f"Missing Twilio configuration: {str(e)}"
+        ic(error_msg)  # Log the error
+        return make_vapi_response(call, f"Error: {error_msg}")
+    except Exception as e:
+        error_msg = f"Unexpected error: {str(e)}"
+        ic(error_msg)  # Log the error
+        return make_vapi_response(call, f"Error: {error_msg}")
+
+
 @modal_app.function(
     image=default_image.pip_install(["httpx"]),
     mounts=[Mount.from_local_dir(modal_storage, remote_path="/" + modal_storage)],
@@ -414,6 +491,9 @@ async def journal_read_endpoint(params: Dict, headers=Depends(get_headers)):
         Secret.from_name(TONY_STORAGE_SERVER_API_KEY),
         Secret.from_name(PPLX_API_KEY_NAME),
         Secret.from_name(ONEBUSAWAY_API_KEY),
+        Secret.from_name(TWILIO_ACCOUNT_SID),
+        Secret.from_name(TWILIO_AUTH_TOKEN),
+        Secret.from_name(TWILIO_FROM_NUMBER),
     ],
 )
 @asgi_app()

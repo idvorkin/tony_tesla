@@ -408,3 +408,66 @@ def test_assistant_endpoint_logs_failure(auth_headers):
     response_data = response.json()
     assert response_data["assistant"]["name"] == "Tony"
     assert "model" in response_data["assistant"]
+
+
+@pytest.mark.asyncio
+async def test_send_text_integration():
+    """Test the send-text endpoint by calling the function directly"""
+    # Test data
+    text_message = "Hello, this is a test message"
+    phone_number = "+12068904339"
+    
+    # Prepare request data
+    headers = {"x-vapi-secret": os.environ.get("TONY_API_KEY", "test_secret")}
+    params = {
+        "message": {
+            "toolCalls": [{
+                "function": {
+                    "name": "send_text",
+                    "arguments": {
+                        "text": text_message,
+                        "to_number": phone_number
+                    }
+                },
+                "id": "test_id",
+                "type": "function"
+            }]
+        }
+    }
+    
+    # Call the endpoint function directly
+    response = await send_text_endpoint(params, headers)
+    
+    # Log the full response for debugging
+    print("\nFull response:", response)
+    
+    # Verify response
+    assert isinstance(response, dict)
+    assert "results" in response
+    assert len(response["results"]) > 0
+    print("\nResult message:", response["results"][0]["result"])  # Log the result message
+    assert "text message sent" in response["results"][0]["result"].lower()
+    assert phone_number in response["results"][0]["result"]
+    assert text_message in response["results"][0]["result"]
+    assert "Message SID:" in response["results"][0]["result"]
+    
+    # Test with missing parameters
+    params_missing = {
+        "message": {
+            "toolCalls": [{
+                "function": {
+                    "name": "send_text",
+                    "arguments": {
+                        "text": text_message
+                        # Missing to_number
+                    }
+                },
+                "id": "test_id",
+                "type": "function"
+            }]
+        }
+    }
+    response = await send_text_endpoint(params_missing, headers)
+    assert isinstance(response, dict)
+    assert "results" in response
+    assert "error" in response["results"][0]["result"].lower()
