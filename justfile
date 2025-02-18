@@ -30,7 +30,7 @@ test-read:
         x-vapi-secret:$TONY_API_KEY \
 
 test-append:
-    http POST https://idvorkin--modal-tony-server-journal-append.modal.run content="ignore this entry" \
+    http POST https://idvorkin--modal-tony-server-fastapi-app.modal.run/journal-append content="ignore this entry" \
         x-vapi-secret:$TONY_API_KEY \
 
 test-blog-info:

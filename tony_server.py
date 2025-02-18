@@ -84,14 +84,14 @@ def parse_tool_call(function_name, params: Dict) -> FunctionCall:
         args = {k: v for k, v in params.items() if v is not None}
         return FunctionCall(id=str(uuid.uuid4()), name=function_name, args=args)
 
-    # Handle complex format (used by VAPI)
+    # Handle VAPI format
     message = params["message"]
-    ic(message.keys())
-    toolCalls = message["toolCalls"]
-    ic(toolCalls)
+    toolCalls = message.get("toolCalls", [])
+    if not toolCalls:
+        # If no toolCalls in message, treat the entire params as args
+        return FunctionCall(id=str(uuid.uuid4()), name=function_name, args=params)
+
     tool = toolCalls[-1]
-    ic(tool)
-    # todo validate the function names match.
     return FunctionCall(
         id=tool["id"],
         name=tool["function"]["name"],
@@ -169,8 +169,9 @@ def trusted_journal_read():
     for i in items:
         first = i
         break
-    content = first["content"]
-    return content
+    if first is None:
+        return "No journal entries found"
+    return first["content"]
 
 
 def get_headers(request: Request):
@@ -329,7 +330,7 @@ async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
     Date and Time: {time_in_pst}
     Location: Seattle
     Phone Number if Asked: {caller_number}
-    {f'<JournalContent>{journal_content}</JournalContent>' if is_igor else ''}
+    {f"<JournalContent>{journal_content}</JournalContent>" if is_igor else ""}
 </CurrentState>
     """
     tony_prompt += extra_state
@@ -399,9 +400,29 @@ async def journal_append_endpoint(params: Dict, headers=Depends(get_headers)):
     for i in items:
         first = i
         break
-    ic(first)
-    journal_item = first
-    journal_item["content"] += f'{datetime.datetime.now()}: {call.args["content"]}\n'
+
+    if first is None:
+        # Create new journal if none exists
+        journal_item = {
+            "id": str(uuid.uuid4()),
+            "content": "",
+            "type": "journal",  # partition key
+            "created_at": datetime.datetime.now(
+                ZoneInfo("America/Los_Angeles")
+            ).isoformat(),
+            "updated_at": datetime.datetime.now(
+                ZoneInfo("America/Los_Angeles")
+            ).isoformat(),
+        }
+    else:
+        journal_item = first
+        journal_item["updated_at"] = datetime.datetime.now(
+            ZoneInfo("America/Los_Angeles")
+        ).isoformat()
+
+    current_time = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
+    formatted_time = current_time.strftime("%Y-%m-%d %H:%M")
+    journal_item["content"] += f"{formatted_time}: {call.args['content']}\n"
     ret = container.upsert_item(journal_item)
     ic(ret)
     return make_vapi_response(call, "success")
