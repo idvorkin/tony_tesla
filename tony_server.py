@@ -52,9 +52,9 @@ default_image = Image.debian_slim(python_version="3.12").pip_install(
         "onebusaway",
         "fastapi[standard]",
         "twilio",
+        "httpx",
     ]
 )
-
 
 app = FastAPI()
 modal_app = App("modal-tony-server")
@@ -113,6 +113,10 @@ def raise_if_not_authorized(headers: Dict):
 
 def search_logic(params: Dict, headers: Dict):
     """Core search logic used by both Modal and FastAPI endpoints"""
+    # Perplexity AI configuration
+    # See model details at https://docs.perplexity.ai/guides/model-cards
+    PPLX_MODEL = "sonar-pro"  # 200k context, 8k output limit
+
     raise_if_not_authorized(headers)
     call = parse_tool_call("search", params)
     url = "https://api.perplexity.ai/chat/completions"
@@ -121,7 +125,7 @@ def search_logic(params: Dict, headers: Dict):
     ic(auth_line)
 
     payload = {
-        "model": "llama-3.1-sonar-large-128k-online",
+        "model": PPLX_MODEL,
         "messages": [
             {"role": "system", "content": "Be precise and concise."},
             {"role": "user", "content": call.args["question"]},
@@ -424,15 +428,15 @@ async def send_text_endpoint(params: Dict, headers=Depends(get_headers)):
 
     raise_if_not_authorized(headers)
     call = parse_tool_call("send_text", params)
-    
+
     # Extract text and to_number from the call arguments
     text = call.args.get("text")
     to_number = call.args.get("to_number")
-    
+
     if not text or not to_number:
         error_msg = "Both text and to_number are required"
         return make_vapi_response(call, f"Error: {error_msg}")
-    
+
     try:
         # Log Twilio environment variables (without sensitive data)
         ic("Twilio environment check:")
@@ -440,35 +444,30 @@ async def send_text_endpoint(params: Dict, headers=Depends(get_headers)):
         ic("TWILIO_AUTH_TOKEN exists:", TWILIO_AUTH_TOKEN in os.environ)
         ic("TWILIO_FROM_NUMBER exists:", TWILIO_FROM_NUMBER in os.environ)
         ic("TWILIO_FROM_NUMBER value:", os.environ.get(TWILIO_FROM_NUMBER))
-        
+
         # Initialize Twilio client
-        client = Client(
-            os.environ[TWILIO_ACCOUNT_SID],
-            os.environ[TWILIO_AUTH_TOKEN]
-        )
-        
+        client = Client(os.environ[TWILIO_ACCOUNT_SID], os.environ[TWILIO_AUTH_TOKEN])
+
         # Log the message parameters
         ic("Sending message with params:")
         ic("To:", to_number)
         ic("From:", os.environ[TWILIO_FROM_NUMBER])
         ic("Text:", text)
-        
+
         # Send message
         message = client.messages.create(
-            body=text,
-            from_=os.environ[TWILIO_FROM_NUMBER],
-            to=to_number
+            body=text, from_=os.environ[TWILIO_FROM_NUMBER], to=to_number
         )
-        
+
         # Log the Twilio response
         ic("Twilio response:", message.__dict__)
-        
+
         # Return success response with message SID
         return make_vapi_response(
-            call, 
-            f"Text message sent to {to_number}: {text} (Message SID: {message.sid})"
+            call,
+            f"Text message sent to {to_number}: {text} (Message SID: {message.sid})",
         )
-        
+
     except TwilioRestException as e:
         error_msg = f"Failed to send message: {str(e)}"
         ic(error_msg)  # Log the error
@@ -484,7 +483,7 @@ async def send_text_endpoint(params: Dict, headers=Depends(get_headers)):
 
 
 @modal_app.function(
-    image=default_image.pip_install(["httpx"]),
+    image=default_image,
     mounts=[Mount.from_local_dir(modal_storage, remote_path="/" + modal_storage)],
     secrets=[
         Secret.from_name(TONY_API_KEY_NAME),
