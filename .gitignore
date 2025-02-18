@@ -3,3 +3,6 @@ __pycache__/
 *.egg-info/
 .env
 .specstory
+
+# Private individual user cursor rules
+.cursor/rules/_*.mdc
