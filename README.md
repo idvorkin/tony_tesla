@@ -3,7 +3,7 @@
 [![Python Tests](https://github.com/idvorkin/tony_tesla/actions/workflows/python-tests.yml/badge.svg?cache=bust)](https://github.com/idvorkin/tony_tesla/actions/workflows/python-tests.yml)
 [![Unit Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/idvorkin/tony_tesla/test-results/test-results/python/badge-unit.json&cache=bust1)](https://github.com/idvorkin/tony_tesla/actions/workflows/python-tests.yml)
 [![Integration Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/idvorkin/tony_tesla/test-results/test-results/python/badge-integration.json&cache=bust1)](https://github.com/idvorkin/tony_tesla/actions/workflows/python-tests.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/idvorkin/tony_tesla/test-results/test-results/python/badge-coverage.json&cache=bust1)](https://github.com/idvorkin/tony_tesla/tree/test-results/test-results/python/coverage)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/idvorkin/tony_tesla/test-results/test-results/python/badge-coverage.json&cache=bust1)](https://htmlpreview.github.io/?https://github.com/idvorkin/tony_tesla/blob/test-results/test-results/python/coverage/index.html)
 
 This is my callable life coach! Lots of fun idea to be played with here.
 
