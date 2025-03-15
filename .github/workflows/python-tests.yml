@@ -146,19 +146,45 @@ jobs:
       run: |
         echo "Coverage directory contents:"
         ls -la test-results/python/coverage/ || echo "Coverage directory not found"
+        echo "Total coverage files:"
+        find test-results/python/coverage -type f | wc -l
+        echo "All test-results files:"
         find test-results/ -type f | wc -l
         # Create .nojekyll file to ensure GitHub Pages doesn't filter any files
         touch test-results/.nojekyll
-        
-    - name: Deploy test results to test-results branch
-      if: always() && github.ref == 'refs/heads/main'
-      uses: JamesIves/github-pages-deploy-action@v4
+    
+    # Force git to keep HTML and JS files
+    - name: Git configuration
+      run: |
+        git config --global core.safecrlf false
+        git config --global core.autocrlf input
+        git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+    
+    # Manually manage the test-results branch
+    - name: Checkout test-results branch
+      uses: actions/checkout@v3
       with:
-        folder: test-results
-        target-folder: test-results
-        branch: test-results
-        clean: false
-        silent: false
+        ref: test-results
+        path: temp-test-results
+    
+    - name: Update test-results branch
+      run: |
+        # Copy all files from test-results to temp-test-results
+        mkdir -p temp-test-results/test-results/python
+        cp -r test-results/* temp-test-results/test-results/
+        
+        # Debug - show what's being copied
+        echo "Files copied to temp-test-results:"
+        find temp-test-results -type f | wc -l
+
+        # Commit and push to test-results branch
+        cd temp-test-results
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        git add -A
+        git commit -m "Update test results and coverage from ${GITHUB_SHA}" || echo "No changes to commit"
+        git push origin test-results
     
     - name: Upload test coverage as artifact
       if: always()
