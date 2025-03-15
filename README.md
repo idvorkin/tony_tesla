@@ -1,7 +1,8 @@
 # Tony the tesla
 
 [![Python Tests](https://github.com/idvorkin/tony_tesla/actions/workflows/python-tests.yml/badge.svg)](https://github.com/idvorkin/tony_tesla/actions/workflows/python-tests.yml)
-[![Test Stats](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/idvorkin/REPLACE_WITH_YOUR_GIST_ID/raw/tony_tesla_stats.json)](https://github.com/idvorkin/tony_tesla/actions/workflows/python-tests.yml)
+[![Test Stats](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/idvorkin/tony_tesla/test-results/test-results/python/badge-stats.json)](https://github.com/idvorkin/tony_tesla/tree/test-results/test-results/python/coverage)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/idvorkin/tony_tesla/test-results/test-results/python/badge-coverage.json)](https://github.com/idvorkin/tony_tesla/tree/test-results/test-results/python/coverage)
 
 This is my callable life coach! Lots of fun idea to be played with here.
 

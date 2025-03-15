@@ -27,6 +27,7 @@ jobs:
     
     - name: Run unit tests
       run: |
+        mkdir -p test-results/python
         pytest tests/unit -v
         echo "UNIT_COUNT=$(pytest tests/unit --collect-only -q | wc -l | xargs)" >> $GITHUB_ENV
     
@@ -37,16 +38,46 @@ jobs:
     
     - name: Run coverage report
       run: |
-        pytest --cov=. --cov-report=xml --cov-report=term-missing
+        pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-report=html:test-results/python/coverage
         echo "COVERAGE_PCT=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); print(round(float(root.attrib['line-rate']) * 100))")" >> $GITHUB_ENV
     
-    - name: Create badges
-      uses: schneegans/dynamic-badges-action@v1.6.0
+    - name: Generate test stats badge
+      run: |
+        # Create badge for test count and coverage
+        cat > test-results/python/badge-stats.json << EOF
+        {
+          "schemaVersion": 1,
+          "label": "Tests",
+          "message": "${{ env.UNIT_COUNT }} unit, ${{ env.INTEGRATION_COUNT }} integration, ${{ env.COVERAGE_PCT }}% coverage",
+          "color": "green"
+        }
+        EOF
+        
+        # Create badge for coverage only
+        cat > test-results/python/badge-coverage.json << EOF
+        {
+          "schemaVersion": 1,
+          "label": "Coverage",
+          "message": "${{ env.COVERAGE_PCT }}%",
+          "color": "$([ ${{ env.COVERAGE_PCT }} -ge 80 ] && echo 'success' || ([ ${{ env.COVERAGE_PCT }} -ge 60 ] && echo 'yellow' || echo 'critical'))"
+        }
+        EOF
+        
+        ls -la test-results/python
+    
+    - name: Deploy test results to test-results branch
       if: github.ref == 'refs/heads/main'
+      uses: JamesIves/github-pages-deploy-action@v4
       with:
-        auth: ${{ secrets.GIST_SECRET }}
-        gistID: ${{ secrets.GIST_ID }}
-        filename: tony_tesla_stats.json
-        label: Tests
-        message: ${{ env.UNIT_COUNT }} unit, ${{ env.INTEGRATION_COUNT }} integration, ${{ env.COVERAGE_PCT }}% coverage
-        color: green
+        folder: test-results
+        target-folder: test-results
+        branch: test-results
+        clean: false
+    
+    - name: Upload test coverage as artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-coverage
+        path: test-results/python/coverage/
+        retention-days: 30
