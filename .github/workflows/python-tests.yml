@@ -22,22 +22,22 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install just uv
-        just install
+        pip install -e ".[dev]"
+        pip install pytest pytest-cov
     
     - name: Run unit tests
       run: |
-        just test-unit
+        pytest tests/unit -v
         echo "UNIT_COUNT=$(pytest tests/unit --collect-only -q | wc -l | xargs)" >> $GITHUB_ENV
     
     - name: Run integration tests
       run: |
-        just test-integration
+        pytest tests/integration -v
         echo "INTEGRATION_COUNT=$(pytest tests/integration --collect-only -q | wc -l | xargs)" >> $GITHUB_ENV
     
     - name: Run coverage report
       run: |
-        just test-coverage
+        pytest --cov=. --cov-report=xml --cov-report=term-missing
         echo "COVERAGE_PCT=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); print(round(float(root.attrib['line-rate']) * 100))")" >> $GITHUB_ENV
     
     - name: Create badges
