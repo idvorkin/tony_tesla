@@ -1,0 +1,52 @@
+name: Python Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install just uv
+        just install
+    
+    - name: Run unit tests
+      run: |
+        just test-unit
+        echo "UNIT_COUNT=$(pytest tests/unit --collect-only -q | wc -l | xargs)" >> $GITHUB_ENV
+    
+    - name: Run integration tests
+      run: |
+        just test-integration
+        echo "INTEGRATION_COUNT=$(pytest tests/integration --collect-only -q | wc -l | xargs)" >> $GITHUB_ENV
+    
+    - name: Run coverage report
+      run: |
+        just test-coverage
+        echo "COVERAGE_PCT=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); print(round(float(root.attrib['line-rate']) * 100))")" >> $GITHUB_ENV
+    
+    - name: Create badges
+      uses: schneegans/dynamic-badges-action@v1.6.0
+      if: github.ref == 'refs/heads/main'
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: ${{ secrets.GIST_ID }}
+        filename: tony_tesla_stats.json
+        label: Tests
+        message: ${{ env.UNIT_COUNT }} unit, ${{ env.INTEGRATION_COUNT }} integration, ${{ env.COVERAGE_PCT }}% coverage
+        color: green

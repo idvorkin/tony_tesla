@@ -68,7 +68,7 @@ test-debug:
     pytest -v
 
 test-coverage:
-    pytest -n auto --cov=. --cov-report=term-missing
+    pytest -n auto --cov=. --cov-report=xml --cov-report=term-missing
 
 test-unit:
     pytest tests/unit -n auto
