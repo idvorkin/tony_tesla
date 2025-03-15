@@ -90,13 +90,33 @@ jobs:
           echo "COVERAGE_PCT=0" >> $GITHUB_ENV
         fi
         
-        # Create badge for test count and coverage
-        cat > test-results/python/badge-stats.json << EOF
+        # Get test passing count (needed for XX/YY format)
+        # Calculate passed tests based on exit codes
+        UNIT_PASS=$([ "$UNIT_TEST_EXIT" == "0" ] && echo "$UNIT_COUNT" || echo "0")
+        INTEGRATION_PASS=$([ "$INTEGRATION_TEST_EXIT" == "0" ] && echo "$INTEGRATION_COUNT" || echo "0")
+        
+        # Determine colors based on test results
+        UNIT_COLOR=$([ "$UNIT_TEST_EXIT" == "0" ] && echo "success" || echo "critical")
+        INTEGRATION_COLOR=$([ "$INTEGRATION_TEST_EXIT" == "0" ] && echo "success" || echo "critical")
+        COVERAGE_COLOR=$([ ${{ env.COVERAGE_PCT }} -ge 80 ] && echo "success" || ([ ${{ env.COVERAGE_PCT }} -ge 60 ] && echo "yellow" || echo "critical"))
+        
+        # Create badge for unit tests
+        cat > test-results/python/badge-unit.json << EOF
         {
           "schemaVersion": 1,
-          "label": "Tests",
-          "message": "${{ env.UNIT_COUNT }} unit, ${{ env.INTEGRATION_COUNT }} integration, ${{ env.COVERAGE_PCT }}% coverage",
-          "color": "$([ ${{ env.COVERAGE_PCT }} -ge 80 ] && echo 'success' || ([ ${{ env.COVERAGE_PCT }} -ge 60 ] && echo 'yellow' || echo 'critical'))"
+          "label": "Unit",
+          "message": "${UNIT_PASS}/${UNIT_COUNT}",
+          "color": "${UNIT_COLOR}"
+        }
+        EOF
+        
+        # Create badge for integration tests
+        cat > test-results/python/badge-integration.json << EOF
+        {
+          "schemaVersion": 1,
+          "label": "Integration",
+          "message": "${INTEGRATION_PASS}/${INTEGRATION_COUNT}",
+          "color": "${INTEGRATION_COLOR}"
         }
         EOF
         
@@ -106,17 +126,7 @@ jobs:
           "schemaVersion": 1,
           "label": "Coverage",
           "message": "${{ env.COVERAGE_PCT }}%",
-          "color": "$([ ${{ env.COVERAGE_PCT }} -ge 80 ] && echo 'success' || ([ ${{ env.COVERAGE_PCT }} -ge 60 ] && echo 'yellow' || echo 'critical'))"
-        }
-        EOF
-        
-        # Create badge for workflow status
-        cat > test-results/python/badge-status.json << EOF
-        {
-          "schemaVersion": 1,
-          "label": "Status",
-          "message": "${{ job.status }}",
-          "color": "${{ job.status == 'success' && 'success' || 'critical' }}"
+          "color": "${COVERAGE_COLOR}"
         }
         EOF
         
