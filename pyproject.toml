@@ -27,7 +27,8 @@ dependencies = [
     "pathlib",
     "onebusaway",
     "modal",
-    "textual>=1.0.0"
+    "textual>=1.0.0",
+    "twilio"
 ]
 
 [project.optional-dependencies]
@@ -37,7 +38,8 @@ dev = [
     "pytest-cov",
     "textual-dev",
     "pytest-timeout",
-    "pytest-xdist"
+    "pytest-xdist",
+    "pytest-json-report"
 ]
 
 [tool.setuptools]

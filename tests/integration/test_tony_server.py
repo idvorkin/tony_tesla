@@ -60,23 +60,51 @@ def base_params():
 
 def test_search_function(auth_headers, base_params):
     """Test the search function with FastAPI test client"""
-    client = TestClient(app)
-    response = client.post("/search", json=base_params, headers=auth_headers)
+    # Mock the Perplexity API response
+    mock_response_data = {
+        "id": "2fb30930-796a-405d-be66-12fa7f54db75",
+        "model": "sonar-pro",
+        "created": 1742044995,
+        "usage": {"prompt_tokens": 12, "completion_tokens": 356, "total_tokens": 368},
+        "object": "chat.completion",
+        "choices": [
+            {
+                "index": 0,
+                "finish_reason": "stop",
+                "message": {
+                    "role": "assistant",
+                    "content": "The weather in Seattle is currently chilly with intervals of clouds and sun."
+                }
+            }
+        ]
+    }
+    
+    with patch("requests.post") as mock_post:
+        # Configure mock response
+        mock_response = Mock()
+        mock_response.json.return_value = mock_response_data
+        mock_post.return_value = mock_response
+        
+        # Make the request
+        client = TestClient(app)
+        response = client.post("/search", json=base_params, headers=auth_headers)
 
-    assert (
-        response.status_code == 200
-    ), f"Expected status code 200, got {response.status_code}"
-
-    result = response.json()
-    assert (
-        "results" in result
-    ), "Expected 'results' key in response, but it was not found."
-    assert (
-        len(result["results"]) > 0
-    ), "Expected at least one result in 'results', but none were found."
-
-    result_str = result["results"][0]["result"]
-    assert isinstance(result_str, str), "Expected result to be a string."
+        # Verify the response
+        assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+        result = response.json()
+        assert "results" in result, "Expected 'results' key in response, but it was not found."
+        assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
+        
+        result_str = result["results"][0]["result"]
+        assert isinstance(result_str, str), "Expected result to be a string."
+        assert "weather in Seattle" in result_str
+        
+        # Verify Perplexity API was called correctly
+        mock_post.assert_called_once()
+        args, kwargs = mock_post.call_args
+        assert args[0] == "https://api.perplexity.ai/chat/completions"
+        assert kwargs["json"]["model"] == "sonar-pro"
+        assert kwargs["headers"]["authorization"] == f"Bearer {os.environ['PPLX_API_KEY']}"
 
 
 def test_parse_tool_call(base_params):
@@ -438,28 +466,51 @@ async def test_send_text_integration():
         }
     }
     
-    # Call the endpoint function directly
-    response = await send_text_endpoint(params, headers)
-    
-    # Log the full response for debugging
-    print("\nFull response:", response)
-    
-    # Verify response
-    assert isinstance(response, dict)
-    assert "results" in response
-    assert len(response["results"]) > 0
-    print("\nResult message:", response["results"][0]["result"])  # Log the result message
-    
-    # Accept either success or error message containing the missing Twilio credentials
-    if "text message sent" in response["results"][0]["result"].lower():
+    # Mock Twilio client and its message creation
+    with patch("twilio.rest.Client") as mock_client_class:
+        # Mock the Twilio client instance
+        mock_client = Mock()
+        mock_client_class.return_value = mock_client
+        
+        # Mock the messages resource
+        mock_messages = Mock()
+        mock_client.messages = mock_messages
+        
+        # Mock the create method and its return value
+        mock_message = Mock()
+        mock_message.sid = "SM12345"
+        mock_messages.create.return_value = mock_message
+        
+        # Call the endpoint function directly
+        response = await send_text_endpoint(params, headers)
+        
+        # Verify response
+        assert isinstance(response, dict)
+        assert "results" in response
+        assert len(response["results"]) > 0
+        
+        # Should have succeeded with mock
+        assert "text message sent" in response["results"][0]["result"].lower()
         assert phone_number in response["results"][0]["result"]
         assert text_message in response["results"][0]["result"]
         assert "Message SID:" in response["results"][0]["result"]
-    else:
-        # If the test environment doesn't have Twilio configured, accept error message
-        assert ("error" in response["results"][0]["result"].lower() and 
-                ("missing twilio configuration" in response["results"][0]["result"].lower() or
-                 "failed to send message" in response["results"][0]["result"].lower()))
+        
+        # Verify Twilio client was used correctly
+        mock_client_class.assert_called_with(
+            os.environ.get("TWILIO_ACCOUNT_SID"), 
+            os.environ.get("TWILIO_AUTH_TOKEN")
+        )
+        mock_messages.create.assert_called_with(
+            body=text_message,
+            from_=os.environ.get("TWILIO_FROM_NUMBER"),
+            to=phone_number
+        )
+    
+    # Test with connection error
+    with patch("twilio.rest.Client") as mock_client_class:
+        mock_client_class.side_effect = Exception("Connection error")
+        response = await send_text_endpoint(params, headers)
+        assert "error" in response["results"][0]["result"].lower()
     
     # Test with missing parameters
     params_missing = {
