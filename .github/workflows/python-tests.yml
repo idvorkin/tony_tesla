@@ -27,38 +27,36 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
-        pip install pytest pytest-cov
+        pip install pytest pytest-cov pytest-json-report
     
     - name: Run unit tests
       run: |
         mkdir -p test-results/python
-        # Count tests correctly
-        unit_count=$(python -m pytest tests/unit --collect-only -v | grep -c "<" || echo 0)
-        echo "UNIT_COUNT=$unit_count" >> $GITHUB_ENV
-        
-        # Run tests (may fail but we'll continue)
+        # Use pytest-json to generate detailed test information
+        # Continue even if tests fail
         set +e
-        python -m pytest tests/unit -v
+        python -m pytest tests/unit -v --json-report --json-report-file=test-results/python/unit-results.json
         unit_test_exit=$?
         set -e
         
-        # Use actual exit code for demo
+        # Extract test counts from the JSON results file
+        echo "UNIT_TOTAL=$(python -c "import json; data = json.load(open('test-results/python/unit-results.json')); print(data['summary']['total'])")" >> $GITHUB_ENV
+        echo "UNIT_PASSED=$(python -c "import json; data = json.load(open('test-results/python/unit-results.json')); print(data['summary']['passed'])")" >> $GITHUB_ENV
         echo "UNIT_TEST_EXIT=$unit_test_exit" >> $GITHUB_ENV
     
     - name: Run integration tests
       if: always()
       run: |
-        # Count tests correctly
-        integration_count=$(python -m pytest tests/integration --collect-only -v | grep -c "<" || echo 0)
-        echo "INTEGRATION_COUNT=$integration_count" >> $GITHUB_ENV
-        
-        # Run tests (may fail but we'll continue)
+        # Use pytest-json to generate detailed test information
+        # Continue even if tests fail
         set +e
-        python -m pytest tests/integration -v
+        python -m pytest tests/integration -v --json-report --json-report-file=test-results/python/integration-results.json
         integration_test_exit=$?
         set -e
         
-        # Use actual exit code for demo
+        # Extract test counts from the JSON results file
+        echo "INTEGRATION_TOTAL=$(python -c "import json; data = json.load(open('test-results/python/integration-results.json')); print(data['summary']['total'])")" >> $GITHUB_ENV
+        echo "INTEGRATION_PASSED=$(python -c "import json; data = json.load(open('test-results/python/integration-results.json')); print(data['summary']['passed'])")" >> $GITHUB_ENV
         echo "INTEGRATION_TEST_EXIT=$integration_test_exit" >> $GITHUB_ENV
     
     - name: Run coverage report
@@ -86,26 +84,29 @@ jobs:
         mkdir -p test-results/python
         
         # Set defaults if tests failed
-        if [ -z "$UNIT_COUNT" ]; then
-          echo "UNIT_COUNT=0" >> $GITHUB_ENV
+        if [ -z "$UNIT_TOTAL" ]; then
+          echo "UNIT_TOTAL=0" >> $GITHUB_ENV
         fi
         
-        if [ -z "$INTEGRATION_COUNT" ]; then
-          echo "INTEGRATION_COUNT=0" >> $GITHUB_ENV
+        if [ -z "$UNIT_PASSED" ]; then
+          echo "UNIT_PASSED=0" >> $GITHUB_ENV
+        fi
+        
+        if [ -z "$INTEGRATION_TOTAL" ]; then
+          echo "INTEGRATION_TOTAL=0" >> $GITHUB_ENV
+        fi
+        
+        if [ -z "$INTEGRATION_PASSED" ]; then
+          echo "INTEGRATION_PASSED=0" >> $GITHUB_ENV
         fi
         
         if [ -z "$COVERAGE_PCT" ]; then
           echo "COVERAGE_PCT=0" >> $GITHUB_ENV
         fi
         
-        # Get test passing count (needed for XX/YY format)
-        # For demo purposes, show all tests passing
-        UNIT_PASS="$UNIT_COUNT"
-        INTEGRATION_PASS="$INTEGRATION_COUNT"
-        
         # Determine colors based on test results
-        UNIT_COLOR="success"
-        INTEGRATION_COLOR="success"
+        UNIT_COLOR=$([ "$UNIT_PASSED" -eq "$UNIT_TOTAL" ] && echo "success" || echo "critical")
+        INTEGRATION_COLOR=$([ "$INTEGRATION_PASSED" -eq "$INTEGRATION_TOTAL" ] && echo "success" || echo "critical")
         COVERAGE_COLOR=$([ ${{ env.COVERAGE_PCT }} -ge 80 ] && echo "success" || ([ ${{ env.COVERAGE_PCT }} -ge 60 ] && echo "yellow" || echo "critical"))
         
         # Create badge for unit tests
@@ -113,7 +114,7 @@ jobs:
         {
           "schemaVersion": 1,
           "label": "Unit",
-          "message": "${UNIT_PASS}/${UNIT_COUNT}",
+          "message": "${UNIT_PASSED}/${UNIT_TOTAL}",
           "color": "${UNIT_COLOR}"
         }
         EOF
@@ -123,7 +124,7 @@ jobs:
         {
           "schemaVersion": 1,
           "label": "Integration",
-          "message": "${INTEGRATION_PASS}/${INTEGRATION_COUNT}",
+          "message": "${INTEGRATION_PASSED}/${INTEGRATION_TOTAL}",
           "color": "${INTEGRATION_COLOR}"
         }
         EOF
