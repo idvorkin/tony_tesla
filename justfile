@@ -18,12 +18,12 @@ deploy:
     modal deploy {{tony_server}}::modal_app
 
 test-assistant:
-    http POST https://idvorkin--modal-tony-server-assistant.modal.run notused="the cat in the hat" \
-        x-vapi-secret:$TONY_API_KEY \
+    echo '{"message": {"type": "assistant-request"}}' | http POST https://idvorkin--modal-tony-server-fastapi-app.modal.run/assistant \
+        x-vapi-secret:$TONY_API_KEY
 
 test-assistant-dev:
-    http POST https://idvorkin--modal-tony-server-assistant-dev.modal.run notused="the cat in the hat" \
-        x-vapi-secret:$TONY_API_KEY \
+    echo '{"message": {"type": "assistant-request"}}' | http POST https://idvorkin--modal-tony-server-dev-fastapi-app.modal.run/assistant \
+        x-vapi-secret:$TONY_API_KEY
 
 test-read:
     http POST https://idvorkin--modal-tony-server-journal-read.modal.run date="the cat in the hat" \

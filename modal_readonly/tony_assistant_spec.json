@@ -16,6 +16,32 @@
         {
           "type": "function",
           "function": {
+            "name": "send_text_ifttt",
+            "description": "Send a text message using IFTTT webhook",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "The text message content to send"
+                },
+                "to_number": {
+                  "type": "string",
+                  "description": "The phone number to send the text message to"
+                }
+              },
+              "required": ["text", "to_number"]
+            }
+          },
+          "async": true,
+          "server": {
+            "url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/send-text-ifttt",
+            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+          }
+        },
+        {
+          "type": "function",
+          "function": {
             "name": "library_arrivals",
             "description": "Get bus arrivals at the library which takes Igor to Garfield",
             "parameters": {
