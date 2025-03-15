@@ -543,8 +543,8 @@ async def test_send_text_ifttt_integration():
         assert "with/key/" in args[0]
         
         # Check payload contents
-        assert kwargs["json"]["value1"] == phone_number
-        assert kwargs["json"]["value2"] == text_message
+        assert kwargs["json"]["value1"] == text_message
+        assert kwargs["json"]["value2"] == phone_number
         assert "From Tony Tesla at " in kwargs["json"]["value3"]
     
     # Test with missing parameters
