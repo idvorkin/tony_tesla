@@ -140,7 +140,16 @@ jobs:
         EOF
         
         ls -la test-results/python
-    
+        
+    - name: Debug coverage directory
+      if: always()
+      run: |
+        echo "Coverage directory contents:"
+        ls -la test-results/python/coverage/ || echo "Coverage directory not found"
+        find test-results/ -type f | wc -l
+        # Create .nojekyll file to ensure GitHub Pages doesn't filter any files
+        touch test-results/.nojekyll
+        
     - name: Deploy test results to test-results branch
       if: always() && github.ref == 'refs/heads/main'
       uses: JamesIves/github-pages-deploy-action@v4
@@ -149,6 +158,7 @@ jobs:
         target-folder: test-results
         branch: test-results
         clean: false
+        silent: false
     
     - name: Upload test coverage as artifact
       if: always()
