@@ -293,7 +293,7 @@ def local_parse_config():
 
 async def a_parse_calls():
     async def transcribe_call(user_text):
-        llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        llm = ChatOpenAI(model="gpt-4.1", temperature=0)
         result = await (
             prompt_transcribe_call(user_text) | llm.with_structured_output(CallSummary)
         ).ainvoke({})
