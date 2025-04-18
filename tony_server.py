@@ -45,6 +45,8 @@ IFTTT_WEBHOOK_SMS_EVENT = "IFTTT_WEBHOOK_SMS_EVENT"
 X_VAPI_SECRET = "x-vapi-secret"
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
+modal_storage = "modal_readonly"
+
 default_image = Image.debian_slim(python_version="3.12").pip_install(
     [
         "icecream",
@@ -56,12 +58,10 @@ default_image = Image.debian_slim(python_version="3.12").pip_install(
         "twilio",
         "httpx",
     ]
-)
+).add_local_dir(modal_storage, remote_path="/" + modal_storage)
 
 app = FastAPI()
 modal_app = App("modal-tony-server")
-
-modal_storage = "modal_readonly"
 
 
 class FunctionCall(pydantic.BaseModel):
@@ -573,7 +573,6 @@ async def send_text_ifttt_endpoint(params: Dict, headers=Depends(get_headers)):
 
 @modal_app.function(
     image=default_image,
-    mounts=[Mount.from_local_dir(modal_storage, remote_path="/" + modal_storage)],
     secrets=[
         Secret.from_name(TONY_API_KEY_NAME),
         Secret.from_name(TONY_STORAGE_SERVER_API_KEY),
