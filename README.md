@@ -7,10 +7,13 @@
 
 This is my callable life coach! Lots of fun idea to be played with here.
 
-* Life Coach
-* Callable Agents
-* Memory
+- Life Coach
+- Callable Agents
+- Memory
 
+## Example Conversation
+
+![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250501_055917.webp)
 
 ## Tech
 
@@ -55,4 +58,3 @@ sequenceDiagram
         note right of Igor: Tony says, "Your gratefulness has been recorded."
     end
 ```
-
