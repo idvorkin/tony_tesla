@@ -13,7 +13,7 @@ This is my callable life coach! Lots of fun idea to be played with here.
 
 ## Example Conversation
 
-![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250501_055917.webp)
+![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250501_060212.webp)
 
 ## Tech
 
