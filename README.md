@@ -13,7 +13,13 @@ This is my callable life coach! Lots of fun idea to be played with here.
 
 ## Example Conversation
 
+### Igor after a a hard day
+
 ![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250501_060212.webp)
+
+### Bob (not his real name), trying Tony for the first time
+
+![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250501_061105.webp)
 
 ## Tech
 
