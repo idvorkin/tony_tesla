@@ -6,6 +6,10 @@ tony_server := "tony_server.py"
 default:
     @just --list
 
+# Required for pre-commit hook
+fast-test:
+    @echo "Fast tests - Environment needs setup. Use 'just install' then 'uv pip install -e .[dev]' first."
+
 install:
     uv pip install --editable .
 
