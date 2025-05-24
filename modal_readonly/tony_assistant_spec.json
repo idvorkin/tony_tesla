@@ -1,253 +1,253 @@
 {
-  "assistant": {
-    "name": "Tony",
-    "voice": {
-      "voiceId": "IKne3meq5aSn9XLyUdCD",
-      "provider": "11labs",
-      "stability": 0.5,
-      "similarityBoost": 0.75,
-      "model": "eleven_flash_v2"
-    },
-    "model": {
-      "model": "gpt-4.1",
-      "provider": "openai",
-      "fallbackModels": ["gpt-4o"],
-      "tools": [
-        {
-          "type": "function",
-          "function": {
-            "name": "send_text_ifttt",
-            "description": "Send a text message using IFTTT webhook",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "text": {
-                  "type": "string",
-                  "description": "The text message content to send"
-                },
-                "to_number": {
-                  "type": "string",
-                  "description": "The phone number to send the text message to"
-                }
-              },
-              "required": ["text", "to_number"]
-            }
-          },
-          "async": true,
-          "server": {
-            "url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/send-text-ifttt",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        },
-        {
-          "type": "function",
-          "function": {
-            "name": "library_arrivals",
-            "description": "Get bus arrivals at the library which takes Igor to Garfield",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "unused": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "async": false,
-          "server": {
-            "url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/library-arrivals",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        },
-        {
-          "type": "function",
-          "function": {
-            "name": "journal_read",
-            "description": "Read the users journal",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "date": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "async": false,
-          "server": {
-            "url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/journal-read",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        },
-        {
-          "type": "function",
-          "function": {
-            "name": "journal_append",
-            "description": "Append an entry to the users journal",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "content": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "async": true,
-          "server": {
-            "url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/journal-append",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        },
-        {
-          "type": "function",
-          "function": {
-            "name": "search",
-            "description": "Search the internet",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "question": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "async": false,
-          "server": {
-            "url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/search",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        },
-        {
-          "type": "function",
-          "function": {
-            "name": "blog_info",
-            "description": "Get information about posts on Igor's blog including URLs, titles, and descriptions",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "unused": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "async": false,
-          "server": {
-            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_info",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        },
-        {
-          "type": "function",
-          "function": {
-            "name": "random_blog",
-            "description": "Get the content of a random blog post from Igor's blog",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "unused": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "async": false,
-          "server": {
-            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/random_blog",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        },
-        {
-          "type": "function",
-          "function": {
-            "name": "read_blog_post",
-            "description": "Get the content of a specific blog post from Igor's blog using its markdown path or URL",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "path": {
-                  "type": "string",
-                  "description": "The path to the blog post - can be either a markdown file path (e.g., '_d/vim_tips.md') or a URL path (e.g., '/vim')"
-                }
-              },
-              "required": ["path"]
-            }
-          },
-          "async": false,
-          "server": {
-            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/read_blog_post",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        },
-        {
-          "type": "function",
-          "function": {
-            "name": "random_blog_url_only",
-            "description": "Get just the URL of a random blog post from Igor's blog without its content",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "unused": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "async": false,
-          "server": {
-            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/random_blog_url",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        },
-        {
-          "type": "function",
-          "function": {
-            "name": "blog_search",
-            "description": "Search Igor's blog posts using keywords",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "query": {
-                  "type": "string",
-                  "description": "The search query to find relevant blog posts"
-                }
-              },
-              "required": ["query"]
-            }
-          },
-          "async": false,
-          "server": {
-            "url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_search",
-            "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-          }
-        }
-      ],
-      "maxTokens": 150,
-      "temperature": 1.0,
-      "emotionRecognitionEnabled": true,
-      "messages": [
-        {
-          "role": "system",
-          "content": "REPLACE ME"
-        }
-      ]
-    },
-    "recordingEnabled": true,
-    "firstMessage": "Tony Here. What can I do you for?",
-    "voicemailMessage": "Hi, you've reached Leo at SmartHome Innovations. Sorry I missed your call. Please leave a message, and I'll get back to you as soon as possible.",
-    "endCallFunctionEnabled": true,
-    "transcriber": {
-      "model": "nova-3",
-      "language": "en",
-      "provider": "deepgram"
-    },
-    "serverMessages": ["function-call"],
-    "dialKeypadFunctionEnabled": false,
-    "endCallPhrases": ["bye for now", "talk soon", "hang up", "end call"],
-    "hipaaEnabled": false,
-    "maxDurationSeconds": 1200,
-    "backgroundDenoisingEnabled": true
-  }
+	"assistant": {
+		"name": "Tony",
+		"voice": {
+			"voiceId": "IKne3meq5aSn9XLyUdCD",
+			"provider": "11labs",
+			"stability": 0.5,
+			"similarityBoost": 0.75,
+			"model": "eleven_flash_v2"
+		},
+		"model": {
+			"model": "gpt-4.1",
+			"provider": "openai",
+			"fallbackModels": ["gpt-4o"],
+			"tools": [
+				{
+					"type": "function",
+					"function": {
+						"name": "send_text_ifttt",
+						"description": "Send a text message using IFTTT webhook",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"text": {
+									"type": "string",
+									"description": "The text message content to send"
+								},
+								"to_number": {
+									"type": "string",
+									"description": "The phone number to send the text message to"
+								}
+							},
+							"required": ["text", "to_number"]
+						}
+					},
+					"async": true,
+					"server": {
+						"url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/send-text-ifttt",
+						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+					}
+				},
+				{
+					"type": "function",
+					"function": {
+						"name": "library_arrivals",
+						"description": "Get bus arrivals at the library which takes Igor to Garfield",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"unused": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"async": false,
+					"server": {
+						"url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/library-arrivals",
+						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+					}
+				},
+				{
+					"type": "function",
+					"function": {
+						"name": "journal_read",
+						"description": "Read the users journal",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"date": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"async": false,
+					"server": {
+						"url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/journal-read",
+						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+					}
+				},
+				{
+					"type": "function",
+					"function": {
+						"name": "journal_append",
+						"description": "Append an entry to the users journal",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"content": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"async": true,
+					"server": {
+						"url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/journal-append",
+						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+					}
+				},
+				{
+					"type": "function",
+					"function": {
+						"name": "search",
+						"description": "Search the internet",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"question": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"async": false,
+					"server": {
+						"url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/search",
+						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+					}
+				},
+				{
+					"type": "function",
+					"function": {
+						"name": "blog_info",
+						"description": "Get information about posts on Igor's blog including URLs, titles, and descriptions",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"unused": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"async": false,
+					"server": {
+						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_info",
+						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+					}
+				},
+				{
+					"type": "function",
+					"function": {
+						"name": "random_blog",
+						"description": "Get the content of a random blog post from Igor's blog",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"unused": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"async": false,
+					"server": {
+						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/random_blog",
+						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+					}
+				},
+				{
+					"type": "function",
+					"function": {
+						"name": "read_blog_post",
+						"description": "Get the content of a specific blog post from Igor's blog using its markdown path or URL",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"path": {
+									"type": "string",
+									"description": "The path to the blog post - can be either a markdown file path (e.g., '_d/vim_tips.md') or a URL path (e.g., '/vim')"
+								}
+							},
+							"required": ["path"]
+						}
+					},
+					"async": false,
+					"server": {
+						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/read_blog_post",
+						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+					}
+				},
+				{
+					"type": "function",
+					"function": {
+						"name": "random_blog_url_only",
+						"description": "Get just the URL of a random blog post from Igor's blog without its content",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"unused": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"async": false,
+					"server": {
+						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/random_blog_url",
+						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+					}
+				},
+				{
+					"type": "function",
+					"function": {
+						"name": "blog_search",
+						"description": "Search Igor's blog posts using keywords",
+						"parameters": {
+							"type": "object",
+							"properties": {
+								"query": {
+									"type": "string",
+									"description": "The search query to find relevant blog posts"
+								}
+							},
+							"required": ["query"]
+						}
+					},
+					"async": false,
+					"server": {
+						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_search",
+						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+					}
+				}
+			],
+			"maxTokens": 150,
+			"temperature": 1.0,
+			"emotionRecognitionEnabled": true,
+			"messages": [
+				{
+					"role": "system",
+					"content": "REPLACE ME"
+				}
+			]
+		},
+		"recordingEnabled": true,
+		"firstMessage": "Tony Here. What can I do you for?",
+		"voicemailMessage": "Hi, you've reached Leo at SmartHome Innovations. Sorry I missed your call. Please leave a message, and I'll get back to you as soon as possible.",
+		"endCallFunctionEnabled": true,
+		"transcriber": {
+			"model": "nova-3",
+			"language": "en",
+			"provider": "deepgram"
+		},
+		"serverMessages": ["function-call"],
+		"dialKeypadFunctionEnabled": false,
+		"endCallPhrases": ["bye for now", "talk soon", "hang up", "end call"],
+		"hipaaEnabled": false,
+		"maxDurationSeconds": 1200,
+		"backgroundDenoisingEnabled": true
+	}
 }

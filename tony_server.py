@@ -18,7 +18,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, status
 from icecream import ic
 
 # import asyncio
-from modal import App, Image, Mount, Secret, asgi_app
+from modal import App, Image, Secret, asgi_app
 from pydantic import BaseModel
 
 
@@ -47,18 +47,22 @@ TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
 modal_storage = "modal_readonly"
 
-default_image = Image.debian_slim(python_version="3.12").pip_install(
-    [
-        "icecream",
-        "requests",
-        "pydantic",
-        "azure-cosmos",
-        "onebusaway",
-        "fastapi[standard]",
-        "twilio",
-        "httpx",
-    ]
-).add_local_dir(modal_storage, remote_path="/" + modal_storage)
+default_image = (
+    Image.debian_slim(python_version="3.12")
+    .pip_install(
+        [
+            "icecream",
+            "requests",
+            "pydantic",
+            "azure-cosmos",
+            "onebusaway",
+            "fastapi[standard]",
+            "twilio",
+            "httpx",
+        ]
+    )
+    .add_local_dir(modal_storage, remote_path="/" + modal_storage)
+)
 
 app = FastAPI()
 modal_app = App("modal-tony-server")
@@ -524,39 +528,40 @@ async def send_text_ifttt_endpoint(params: Dict, headers=Depends(get_headers)):
         ic("IFTTT environment check:")
         ic("IFTTT_WEBHOOK_KEY exists:", IFTTT_WEBHOOK_KEY in os.environ)
         ic("IFTTT_WEBHOOK_SMS_EVENT exists:", IFTTT_WEBHOOK_SMS_EVENT in os.environ)
-        
+
         webhook_key = os.environ[IFTTT_WEBHOOK_KEY]
         webhook_event = os.environ[IFTTT_WEBHOOK_SMS_EVENT]
-        
+
         # Construct IFTTT webhook URL
-        ifttt_url = f"https://maker.ifttt.com/trigger/{webhook_event}/with/key/{webhook_key}"
-        
+        ifttt_url = (
+            f"https://maker.ifttt.com/trigger/{webhook_event}/with/key/{webhook_key}"
+        )
+
         # Prepare the payload for IFTTT
         payload = {
             "value1": text,
             "value2": to_number,
-            "value3": f"From Tony Tesla at {datetime.datetime.now(ZoneInfo('America/Los_Angeles')).strftime('%Y-%m-%d %H:%M:%S')}"
+            "value3": f"From Tony Tesla at {datetime.datetime.now(ZoneInfo('America/Los_Angeles')).strftime('%Y-%m-%d %H:%M:%S')}",
         }
-        
+
         # Log the webhook request
         ic("Sending IFTTT webhook request:")
         ic("URL:", ifttt_url)
         ic("Payload:", payload)
-        
+
         # Send the webhook request
         response = requests.post(ifttt_url, json=payload)
         response.raise_for_status()  # Raise exception for 4XX/5XX responses
-        
+
         # Log the IFTTT response
         ic("IFTTT response status:", response.status_code)
         ic("IFTTT response text:", response.text)
-        
+
         # Return success response
         return make_vapi_response(
-            call,
-            f"Text message sent via IFTTT to {to_number}: {text}"
+            call, f"Text message sent via IFTTT to {to_number}: {text}"
         )
-        
+
     except requests.exceptions.RequestException as e:
         error_msg = f"Failed to send webhook request: {str(e)}"
         ic(error_msg)

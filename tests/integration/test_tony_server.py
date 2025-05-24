@@ -32,10 +32,13 @@ def mock_tony_files():
     mock_journal = Mock(return_value="Test journal content")
 
     # Mock the modal_storage path to point to the project's modal_readonly directory
-    with patch(
-        "tony_server.modal_storage",
-        Path(__file__).parent.parent.parent / "modal_readonly",
-    ), patch("tony_server.trusted_journal_read", mock_journal):
+    with (
+        patch(
+            "tony_server.modal_storage",
+            Path(__file__).parent.parent.parent / "modal_readonly",
+        ),
+        patch("tony_server.trusted_journal_read", mock_journal),
+    ):
         yield
 
 
@@ -73,38 +76,46 @@ def test_search_function(auth_headers, base_params):
                 "finish_reason": "stop",
                 "message": {
                     "role": "assistant",
-                    "content": "The weather in Seattle is currently chilly with intervals of clouds and sun."
-                }
+                    "content": "The weather in Seattle is currently chilly with intervals of clouds and sun.",
+                },
             }
-        ]
+        ],
     }
-    
+
     with patch("requests.post") as mock_post:
         # Configure mock response
         mock_response = Mock()
         mock_response.json.return_value = mock_response_data
         mock_post.return_value = mock_response
-        
+
         # Make the request
         client = TestClient(app)
         response = client.post("/search", json=base_params, headers=auth_headers)
 
         # Verify the response
-        assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+        assert response.status_code == 200, (
+            f"Expected status code 200, got {response.status_code}"
+        )
         result = response.json()
-        assert "results" in result, "Expected 'results' key in response, but it was not found."
-        assert len(result["results"]) > 0, "Expected at least one result in 'results', but none were found."
-        
+        assert "results" in result, (
+            "Expected 'results' key in response, but it was not found."
+        )
+        assert len(result["results"]) > 0, (
+            "Expected at least one result in 'results', but none were found."
+        )
+
         result_str = result["results"][0]["result"]
         assert isinstance(result_str, str), "Expected result to be a string."
         assert "weather in Seattle" in result_str
-        
+
         # Verify Perplexity API was called correctly
         mock_post.assert_called_once()
         args, kwargs = mock_post.call_args
         assert args[0] == "https://api.perplexity.ai/chat/completions"
         assert kwargs["json"]["model"] == "sonar-pro"
-        assert kwargs["headers"]["authorization"] == f"Bearer {os.environ['PPLX_API_KEY']}"
+        assert (
+            kwargs["headers"]["authorization"] == f"Bearer {os.environ['PPLX_API_KEY']}"
+        )
 
 
 def test_parse_tool_call(base_params):
@@ -153,9 +164,9 @@ def test_blog_search(auth_headers):
     response = client.post("/blog_search", json=params, headers=auth_headers)
 
     # Check response status and structure
-    assert (
-        response.status_code == 200
-    ), f"Expected status code 200, got {response.status_code}"
+    assert response.status_code == 200, (
+        f"Expected status code 200, got {response.status_code}"
+    )
 
     result = response.json()
     assert "results" in result, "Expected 'results' key in response"
@@ -171,9 +182,9 @@ def test_blog_search(auth_headers):
         assert "title" in first_result, "Expected 'title' in search result"
         assert "url" in first_result, "Expected 'url' in search result"
         assert "content" in first_result, "Expected 'content' in search result"
-        assert first_result["url"].startswith(
-            "https://idvork.in"
-        ), "URL should start with https://idvork.in"
+        assert first_result["url"].startswith("https://idvork.in"), (
+            "URL should start with https://idvork.in"
+        )
 
 
 @pytest.mark.usefixtures("mock_tony_files")
@@ -222,24 +233,24 @@ def test_vapi_assistant_call_input(auth_headers):
     # Verify the response structure matches expected VAPI format
     assert isinstance(result, dict), "Response should be a dictionary"
     assert "assistant" in result, "Response should have 'assistant' key"
-    assert (
-        "model" in result["assistant"]
-    ), "Response should have 'model' key in assistant"
-    assert (
-        "messages" in result["assistant"]["model"]
-    ), "Response should have 'messages' in model"
-    assert isinstance(
-        result["assistant"]["model"]["messages"], list
-    ), "Messages should be a list"
-    assert (
-        len(result["assistant"]["model"]["messages"]) > 0
-    ), "Should have at least one message"
-    assert (
-        "content" in result["assistant"]["model"]["messages"][0]
-    ), "Message should have content"
-    assert isinstance(
-        result["assistant"]["model"]["messages"][0]["content"], str
-    ), "Message content should be string"
+    assert "model" in result["assistant"], (
+        "Response should have 'model' key in assistant"
+    )
+    assert "messages" in result["assistant"]["model"], (
+        "Response should have 'messages' in model"
+    )
+    assert isinstance(result["assistant"]["model"]["messages"], list), (
+        "Messages should be a list"
+    )
+    assert len(result["assistant"]["model"]["messages"]) > 0, (
+        "Should have at least one message"
+    )
+    assert "content" in result["assistant"]["model"]["messages"][0], (
+        "Message should have content"
+    )
+    assert isinstance(result["assistant"]["model"]["messages"][0]["content"], str), (
+        "Message content should be string"
+    )
 
 
 @pytest.mark.usefixtures("mock_tony_files")
@@ -288,24 +299,24 @@ def test_vapi_assistant_call_input_non_igor(auth_headers):
     tool_names = [
         tool["function"]["name"] for tool in result["assistant"]["model"]["tools"]
     ]
-    assert (
-        "journal_read" not in tool_names
-    ), "Non-Igor should not have access to journal_read"
-    assert (
-        "journal_append" not in tool_names
-    ), "Non-Igor should not have access to journal_append"
-    assert (
-        "library_arrivals" in tool_names
-    ), "Non-Igor should have access to library_arrivals"
+    assert "journal_read" not in tool_names, (
+        "Non-Igor should not have access to journal_read"
+    )
+    assert "journal_append" not in tool_names, (
+        "Non-Igor should not have access to journal_append"
+    )
+    assert "library_arrivals" in tool_names, (
+        "Non-Igor should have access to library_arrivals"
+    )
 
     # Verify restrictions are added to prompt
     messages = result["assistant"]["model"]["messages"]
-    assert any(
-        "<Restrictions>" in msg["content"] for msg in messages
-    ), "Restrictions should be added for non-Igor"
-    assert not any(
-        "JournalContent" in msg["content"] for msg in messages
-    ), "Journal content should not be included for non-Igor"
+    assert any("<Restrictions>" in msg["content"] for msg in messages), (
+        "Restrictions should be added for non-Igor"
+    )
+    assert not any("JournalContent" in msg["content"] for msg in messages), (
+        "Journal content should not be included for non-Igor"
+    )
 
 
 def test_is_igor_caller():
@@ -365,9 +376,9 @@ def test_apply_caller_restrictions():
     ]
     assert "journal_read" in tool_names, "Igor should have access to journal_read"
     assert "journal_append" in tool_names, "Igor should have access to journal_append"
-    assert (
-        "library_arrivals" in tool_names
-    ), "Igor should have access to library_arrivals"
+    assert "library_arrivals" in tool_names, (
+        "Igor should have access to library_arrivals"
+    )
     assert "search" in tool_names, "Igor should have access to search"
     assert (
         "<Restrictions>"
@@ -379,24 +390,24 @@ def test_apply_caller_restrictions():
     restricted_tool_names = [
         tool["function"]["name"] for tool in other_tony["assistant"]["model"]["tools"]
     ]
-    assert (
-        "journal_read" not in restricted_tool_names
-    ), "Non-Igor should not have access to journal_read"
-    assert (
-        "journal_append" not in restricted_tool_names
-    ), "Non-Igor should not have access to journal_append"
-    assert (
-        "library_arrivals" in restricted_tool_names
-    ), "Non-Igor should have access to library_arrivals"
-    assert (
-        "search" in restricted_tool_names
-    ), "Non-Igor should still have access to search"
-    assert (
-        "blog_info" in restricted_tool_names
-    ), "Non-Igor should still have access to blog_info"
-    assert (
-        "blog_search" in restricted_tool_names
-    ), "Non-Igor should still have access to blog_search"
+    assert "journal_read" not in restricted_tool_names, (
+        "Non-Igor should not have access to journal_read"
+    )
+    assert "journal_append" not in restricted_tool_names, (
+        "Non-Igor should not have access to journal_append"
+    )
+    assert "library_arrivals" in restricted_tool_names, (
+        "Non-Igor should have access to library_arrivals"
+    )
+    assert "search" in restricted_tool_names, (
+        "Non-Igor should still have access to search"
+    )
+    assert "blog_info" in restricted_tool_names, (
+        "Non-Igor should still have access to blog_info"
+    )
+    assert "blog_search" in restricted_tool_names, (
+        "Non-Igor should still have access to blog_search"
+    )
     assert (
         "<Restrictions>" in other_tony["assistant"]["model"]["messages"][0]["content"]
     )
@@ -447,85 +458,85 @@ async def test_send_text_integration():
     # Test data
     text_message = "Hello, this is a test message"
     phone_number = "+12068904339"
-    
+
     # Prepare request data
     headers = {"x-vapi-secret": os.environ.get("TONY_API_KEY", "test_secret")}
     params = {
         "message": {
-            "toolCalls": [{
-                "function": {
-                    "name": "send_text",
-                    "arguments": {
-                        "text": text_message,
-                        "to_number": phone_number
-                    }
-                },
-                "id": "test_id",
-                "type": "function"
-            }]
+            "toolCalls": [
+                {
+                    "function": {
+                        "name": "send_text",
+                        "arguments": {"text": text_message, "to_number": phone_number},
+                    },
+                    "id": "test_id",
+                    "type": "function",
+                }
+            ]
         }
     }
-    
+
     # Mock Twilio client and its message creation
     with patch("twilio.rest.Client") as mock_client_class:
         # Mock the Twilio client instance
         mock_client = Mock()
         mock_client_class.return_value = mock_client
-        
+
         # Mock the messages resource
         mock_messages = Mock()
         mock_client.messages = mock_messages
-        
+
         # Mock the create method and its return value
         mock_message = Mock()
         mock_message.sid = "SM12345"
         mock_messages.create.return_value = mock_message
-        
+
         # Call the endpoint function directly
         response = await send_text_endpoint(params, headers)
-        
+
         # Verify response
         assert isinstance(response, dict)
         assert "results" in response
         assert len(response["results"]) > 0
-        
+
         # Should have succeeded with mock
         assert "text message sent" in response["results"][0]["result"].lower()
         assert phone_number in response["results"][0]["result"]
         assert text_message in response["results"][0]["result"]
         assert "Message SID:" in response["results"][0]["result"]
-        
+
         # Verify Twilio client was used correctly
         mock_client_class.assert_called_with(
-            os.environ.get("TWILIO_ACCOUNT_SID"), 
-            os.environ.get("TWILIO_AUTH_TOKEN")
+            os.environ.get("TWILIO_ACCOUNT_SID"), os.environ.get("TWILIO_AUTH_TOKEN")
         )
         mock_messages.create.assert_called_with(
             body=text_message,
             from_=os.environ.get("TWILIO_FROM_NUMBER"),
-            to=phone_number
+            to=phone_number,
         )
-    
+
     # Test with connection error
     with patch("twilio.rest.Client") as mock_client_class:
         mock_client_class.side_effect = Exception("Connection error")
         response = await send_text_endpoint(params, headers)
         assert "error" in response["results"][0]["result"].lower()
-    
+
     # Test with missing parameters
     params_missing = {
         "message": {
-            "toolCalls": [{
-                "function": {
-                    "name": "send_text",
-                    "arguments": {
-                        "text": text_message
-                        # Missing to_number
-                    }
-                },
-                "id": "test_id",
-                "type": "function"
-            }]
+            "toolCalls": [
+                {
+                    "function": {
+                        "name": "send_text",
+                        "arguments": {
+                            "text": text_message
+                            # Missing to_number
+                        },
+                    },
+                    "id": "test_id",
+                    "type": "function",
+                }
+            ]
         }
     }
     response = await send_text_endpoint(params_missing, headers)
@@ -540,25 +551,24 @@ async def test_send_text_ifttt_integration():
     # Test data
     text_message = "Hello, this is a test message"
     phone_number = "+12068904339"
-    
+
     # Prepare request data
     headers = {"x-vapi-secret": os.environ.get("TONY_API_KEY", "test_secret")}
     params = {
         "message": {
-            "toolCalls": [{
-                "function": {
-                    "name": "send_text_ifttt",
-                    "arguments": {
-                        "text": text_message,
-                        "to_number": phone_number
-                    }
-                },
-                "id": "test_id",
-                "type": "function"
-            }]
+            "toolCalls": [
+                {
+                    "function": {
+                        "name": "send_text_ifttt",
+                        "arguments": {"text": text_message, "to_number": phone_number},
+                    },
+                    "id": "test_id",
+                    "type": "function",
+                }
+            ]
         }
     }
-    
+
     # Mock the requests.post method
     with patch("requests.post") as mock_post:
         # Configure the mock to return a successful response
@@ -566,15 +576,15 @@ async def test_send_text_ifttt_integration():
         mock_response.status_code = 200
         mock_response.text = "Congratulations! You've fired the sms_event event"
         mock_post.return_value = mock_response
-        
+
         # Call the endpoint function directly
         response = await send_text_ifttt_endpoint(params, headers)
-        
+
         # Verify response
         assert isinstance(response, dict)
         assert "results" in response
         assert len(response["results"]) > 0
-        
+
         # Accept either success message or error message with webhook failure
         if "text message sent via ifttt" in response["results"][0]["result"].lower():
             assert phone_number in response["results"][0]["result"]
@@ -582,54 +592,68 @@ async def test_send_text_ifttt_integration():
         else:
             # If IFTTT isn't properly configured, accept error message about webhook
             assert "error" in response["results"][0]["result"].lower()
-            assert ("failed to send webhook request" in response["results"][0]["result"].lower() or
-                    "missing ifttt configuration" in response["results"][0]["result"].lower())
-        
+            assert (
+                "failed to send webhook request"
+                in response["results"][0]["result"].lower()
+                or "missing ifttt configuration"
+                in response["results"][0]["result"].lower()
+            )
+
         # Verify the requests.post was called correctly
         mock_post.assert_called_once()
         args, kwargs = mock_post.call_args
-        
+
         # Check that URL contains the webhook key and event
         assert "maker.ifttt.com/trigger/" in args[0]
         assert "with/key/" in args[0]
-        
+
         # Check payload contents
         assert kwargs["json"]["value1"] == text_message
         assert kwargs["json"]["value2"] == phone_number
         assert "From Tony Tesla at " in kwargs["json"]["value3"]
-    
+
     # Test with missing parameters
     params_missing = {
         "message": {
-            "toolCalls": [{
-                "function": {
-                    "name": "send_text_ifttt",
-                    "arguments": {
-                        "text": text_message
-                        # Missing to_number
-                    }
-                },
-                "id": "test_id",
-                "type": "function"
-            }]
+            "toolCalls": [
+                {
+                    "function": {
+                        "name": "send_text_ifttt",
+                        "arguments": {
+                            "text": text_message
+                            # Missing to_number
+                        },
+                    },
+                    "id": "test_id",
+                    "type": "function",
+                }
+            ]
         }
     }
     response = await send_text_ifttt_endpoint(params_missing, headers)
     assert isinstance(response, dict)
     assert "results" in response
     assert "error" in response["results"][0]["result"].lower()
-    
+
     # Test with request exception
     with patch("requests.post") as mock_post:
-        mock_post.side_effect = requests.exceptions.RequestException("Connection failed")
+        mock_post.side_effect = requests.exceptions.RequestException(
+            "Connection failed"
+        )
         response = await send_text_ifttt_endpoint(params, headers)
         assert "error" in response["results"][0]["result"].lower()
-        assert "failed to send webhook request" in response["results"][0]["result"].lower()
-    
+        assert (
+            "failed to send webhook request" in response["results"][0]["result"].lower()
+        )
+
     # Test with missing environment variable
     with patch.dict(os.environ, {"IFTTT_WEBHOOK_KEY": ""}):
         with patch("tony_server.IFTTT_WEBHOOK_KEY", "IFTTT_WEBHOOK_KEY"):
             response = await send_text_ifttt_endpoint(params, headers)
             assert "error" in response["results"][0]["result"].lower()
-            assert ("missing ifttt configuration" in response["results"][0]["result"].lower() or
-                   "failed to send webhook request" in response["results"][0]["result"].lower())
+            assert (
+                "missing ifttt configuration"
+                in response["results"][0]["result"].lower()
+                or "failed to send webhook request"
+                in response["results"][0]["result"].lower()
+            )

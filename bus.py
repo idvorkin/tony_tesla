@@ -201,13 +201,16 @@ def library():
         # Add 2 minutes buffer
         at_time_pst += timedelta(minutes=2)
         at_time_pst_str = at_time_pst.strftime("%I:%M %p")
-        print(f" {at_time_pst_str} - {arrival.route_short_name} to {arrival.trip_headsign}")
+        print(
+            f" {at_time_pst_str} - {arrival.route_short_name} to {arrival.trip_headsign}"
+        )
         # ic(trip)
 
 
 @app.command()
 def get_latest_data():
     """Download the latest transit data files from King County Metro."""
+
     async def download_file(url, filename):
         async with httpx.AsyncClient() as client:
             response = await client.get(url)

@@ -14,7 +14,6 @@ from langchain.prompts import ChatPromptTemplate
 
 from loguru import logger
 from rich.console import Console
-import httpx
 from icecream import ic
 from datetime import datetime, timedelta
 import json
@@ -316,22 +315,17 @@ async def a_parse_calls():
 def search(
     query: Annotated[str, typer.Argument(help="The search query to send")],
     url: Annotated[
-        str, 
-        typer.Option(help="The search endpoint URL")
+        str, typer.Option(help="The search endpoint URL")
     ] = "https://idvorkin--modal-tony-server-fastapi-app.modal.run/search",
 ):
     """Search using Tony's search endpoint."""
-    headers = {
-        "x-vapi-secret": os.environ["TONY_API_KEY"]
-    }
-    
-    data = {
-        "question": query
-    }
-    
+    headers = {"x-vapi-secret": os.environ["TONY_API_KEY"]}
+
+    data = {"question": query}
+
     # Increase timeout to 30 seconds
     response = httpx.post(url, headers=headers, json=data, timeout=30.0)
-    
+
     if response.status_code == 200:
         results = response.json()
         if results and "results" in results and results["results"]:
@@ -346,25 +340,21 @@ def search(
 @app.command()
 def send_text(
     text: Annotated[str, typer.Argument(help="The text message to send")],
-    to_number: Annotated[str, typer.Argument(help="The phone number to send the text to")],
+    to_number: Annotated[
+        str, typer.Argument(help="The phone number to send the text to")
+    ],
     url: Annotated[
-        str, 
-        typer.Option(help="The send-text endpoint URL")
+        str, typer.Option(help="The send-text endpoint URL")
     ] = "https://idvorkin--modal-tony-server-fastapi-app.modal.run/send-text",
 ):
     """Send a text message using Tony's send-text endpoint."""
-    headers = {
-        "x-vapi-secret": os.environ["TONY_API_KEY"]
-    }
-    
-    data = {
-        "text": text,
-        "to_number": to_number
-    }
-    
+    headers = {"x-vapi-secret": os.environ["TONY_API_KEY"]}
+
+    data = {"text": text, "to_number": to_number}
+
     # Increase timeout to 30 seconds
     response = httpx.post(url, headers=headers, json=data, timeout=30.0)
-    
+
     if response.status_code == 200:
         results = response.json()
         if results and "results" in results and results["results"]:

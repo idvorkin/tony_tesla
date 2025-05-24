@@ -63,10 +63,12 @@ def all_files(date: str = None):
         ts = datetime.fromtimestamp(item["_ts"])
         ic(ts.strftime("%B %d, %Y %I:%M:%S"), item)
 
+
 class JournalItemModel(BaseModel):
     id: str
     user: str
     content: str
+
 
 @app.command()
 def read_journal(_: str = "ignored"):
@@ -75,11 +77,11 @@ def read_journal(_: str = "ignored"):
     container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
         JOURNAL_ID_CONTAINER
     )
-    items = [JournalItemModel(**item ) for item in container.read_all_items()]
+    items = [JournalItemModel(**item) for item in container.read_all_items()]
     if len(items) == 0:
         print("No items yet, creating initial one")
         container.create_item(
-            JournalItemModel(id = str(uuid4()), user = "test", content = "").model_dump()
+            JournalItemModel(id=str(uuid4()), user="test", content="").model_dump()
         )
         return
 
@@ -92,6 +94,7 @@ def read_journal(_: str = "ignored"):
     print(content)
     return content
 
+
 @app.command()
 def replace_journal(new_journal_path: str = "ignored"):
     """Replace the journal content with content from the specified file path.
@@ -100,7 +103,7 @@ def replace_journal(new_journal_path: str = "ignored"):
     container = client.get_database_client(JOURNAL_DATABASE_ID).get_container_client(
         JOURNAL_ID_CONTAINER
     )
-    items = [JournalItemModel(**item ) for item in container.read_all_items()]
+    items = [JournalItemModel(**item) for item in container.read_all_items()]
     if len(items) != 1:
         print("more then one journal entry -- oops")
         ic(items)
@@ -110,12 +113,12 @@ def replace_journal(new_journal_path: str = "ignored"):
     original_journal_content = items[0].content
 
     # backup the elesment
-    date_string = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    date_string = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     Path(f"backup.journal.{date_string}.txt").write_text(original_journal_content)
 
     new_journal_content = Path(new_journal_path).read_text()
     if not len(new_journal_content) > 10:
-        ic ("too short:", new_journal_content)
+        ic("too short:", new_journal_content)
         return
 
     updated_journal_item = items[0].model_copy()

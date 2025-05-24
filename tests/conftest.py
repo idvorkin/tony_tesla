@@ -1,11 +1,12 @@
 import os
 import pytest
 
+
 @pytest.fixture(autouse=True)
 def setup_test_environment():
     """Set up test environment variables for all tests."""
     original_environ = dict(os.environ)
-    
+
     # Set up test environment variables
     os.environ["TONY_API_KEY"] = "test_secret"
     os.environ["PPLX_API_KEY"] = "test_pplx_key"
@@ -16,9 +17,9 @@ def setup_test_environment():
     os.environ["TWILIO_FROM_NUMBER"] = "+13203734339"
     os.environ["IFTTT_WEBHOOK_KEY"] = "test_key"
     os.environ["IFTTT_WEBHOOK_SMS_EVENT"] = "test_event"
-    
+
     yield
-    
+
     # Restore original environment
     os.environ.clear()
     os.environ.update(original_environ)
