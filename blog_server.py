@@ -1,3 +1,15 @@
+#!uv run
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#     "fastapi[standard]",
+#     "icecream",
+#     "pydantic",
+#     "requests",
+#     "modal",
+# ]
+# ///
+
 import json
 import random
 from typing import Dict, Optional

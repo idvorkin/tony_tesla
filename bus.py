@@ -1,5 +1,16 @@
-#!/usr/bin/env python3
-
+#!uv run
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#     "typer",
+#     "icecream",
+#     "rich",
+#     "pydantic",
+#     "loguru",
+#     "httpx",
+#     "onebusaway",
+# ]
+# ///
 
 import csv
 import json

@@ -1,5 +1,18 @@
-#!python3
-
+#!uv run
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#     "fastapi[standard]",
+#     "icecream",
+#     "pydantic",
+#     "azure-cosmos",
+#     "requests",
+#     "httpx",
+#     "modal",
+#     "onebusaway",
+#     "twilio",
+# ]
+# ///
 
 import datetime
 import json
