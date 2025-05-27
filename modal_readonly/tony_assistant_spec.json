@@ -222,6 +222,14 @@
 						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_search",
 						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
 					}
+				},
+				{
+					"type": "mcp",
+					"name": "fortuneTellerMCPService",
+					"server": {
+						"url": "REPLACE_WITH_DEPLOYED_FORTUNE_MCP_SERVER_URL/mcp"
+					},
+					"comment": "URL is a placeholder. Authentication (e.g., x-vapi-secret) needs careful consideration as Vapi's type: 'mcp' tool might not send custom headers directly. The server uses an environment variable for the secret, which Vapi would need to be configured to send if direct header injection isn't supported for MCP type tools by Vapi."
 				}
 			],
 			"maxTokens": 150,

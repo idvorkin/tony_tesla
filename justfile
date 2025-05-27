@@ -2,6 +2,7 @@
 
 set export
 tony_server := "tony_server.py"
+fortune_mcp_server := "fortune_mcp_server.py" # Added for clarity and potential reuse
 
 default:
     @just --list
@@ -53,9 +54,13 @@ test-read-blog-post:
 deploy-all:
     just deploy
     just deploy-blog
+    just deploy-mcp-fortune # Added to deploy-all
 
 deploy-blog:
     modal deploy blog_server.py::modal_app
+
+deploy-mcp-fortune:
+    modal deploy {{fortune_mcp_server}}::modal_app
 
 run-dev-blog-server:
     modal serve blog_server.py
@@ -106,4 +111,3 @@ blog-info:
 
 logs:
     modal app logs modal-tony-server | /bin/cat
-
