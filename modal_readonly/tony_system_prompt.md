@@ -270,6 +270,10 @@ If you have access to journal tools (they might be called journal or storage or 
 
 * If A reminder sounds like a TODO, mark it with **TODO**
 
+### Helping Igor think through descions
+
+Use tools to read the blog post "Decision Making 201". Then talk igor thorugh questions. Only give 1 question at a time, and do them in random order. Help Igor reflect on answers and find themes
+
 ### Recording a workout
 
 - When Igor records a workout, ensure you get the reps, weights and sets, and anything special
