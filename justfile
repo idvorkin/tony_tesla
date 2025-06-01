@@ -19,7 +19,7 @@ global-install: install
 run-dev-server:
     modal serve {{tony_server}}::modal_app
 deploy:
-    modal deploy {{tony_server}}::modal_app
+    uv run modal deploy {{tony_server}}::modal_app
 
 test-assistant:
     echo '{"message": {"type": "assistant-request"}}' | http POST https://idvorkin--modal-tony-server-fastapi-app.modal.run/assistant \
@@ -55,7 +55,7 @@ deploy-all:
     just deploy-blog
 
 deploy-blog:
-    modal deploy blog_server.py::modal_app
+    uv run modal deploy blog_server.py::modal_app
 
 run-dev-blog-server:
     modal serve blog_server.py
@@ -66,22 +66,22 @@ test-random-blog-url:
 
 # Test commands
 test:
-    pytest -n auto
+    uv run pytest -n auto
 
 test-debug:
-    pytest -v
+    uv run pytest -v
 
 test-coverage:
-    pytest -n auto --cov=. --cov-report=xml --cov-report=term-missing
+    uv run pytest -n auto --cov=. --cov-report=xml --cov-report=term-missing
 
 test-unit:
-    pytest tests/unit -n auto
+    uv run pytest tests/unit -n auto
 
 test-integration:
-    pytest tests/integration -n auto --dist loadscope -v
+    uv run pytest tests/integration -n auto --dist loadscope -v
 
 test-e2e:
-    pytest tests/e2e -n auto
+    uv run pytest tests/e2e -n auto
 
 test-send-text:
     http POST https://idvorkin--modal-tony-server-fastapi-app.modal.run/send-text \

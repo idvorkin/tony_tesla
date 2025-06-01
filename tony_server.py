@@ -34,6 +34,17 @@ from icecream import ic
 from modal import App, Image, Secret, asgi_app
 from pydantic import BaseModel
 
+# Import shared utilities
+from shared import (
+    FunctionCall,
+    make_vapi_response,
+    parse_tool_call,
+    raise_if_not_authorized,
+    get_headers,
+    TONY_API_KEY_NAME,
+    X_VAPI_SECRET,
+)
+
 
 # Configure icecream to truncate long output
 def truncate_value(obj):
@@ -47,7 +58,6 @@ ic.configureOutput(prefix="", outputFunction=print)
 ic.configureOutput(argToStringFunction=truncate_value)
 
 PPLX_API_KEY_NAME = "PPLX_API_KEY"
-TONY_API_KEY_NAME = "TONY_API_KEY"
 ONEBUSAWAY_API_KEY = "ONEBUSAWAY_API_KEY"
 TONY_STORAGE_SERVER_API_KEY = "TONY_STORAGE_SERVER_API_KEY"
 TWILIO_ACCOUNT_SID = "TWILIO_ACCOUNT_SID"
@@ -55,7 +65,6 @@ TWILIO_AUTH_TOKEN = "TWILIO_AUTH_TOKEN"
 TWILIO_FROM_NUMBER = "TWILIO_FROM_NUMBER"
 IFTTT_WEBHOOK_KEY = "IFTTT_WEBHOOK_KEY"
 IFTTT_WEBHOOK_SMS_EVENT = "IFTTT_WEBHOOK_SMS_EVENT"
-X_VAPI_SECRET = "x-vapi-secret"
 TONY_ASSISTANT_ID = "f5fe3b31-0ff6-4395-bc08-bc8ebbbf48a6"
 
 modal_storage = "modal_readonly"
@@ -74,6 +83,7 @@ default_image = (
             "httpx",
         ]
     )
+    .add_local_file("shared.py", remote_path="/root/shared.py")
     .add_local_dir(modal_storage, remote_path="/" + modal_storage)
 )
 
@@ -81,53 +91,9 @@ app = FastAPI()
 modal_app = App("modal-tony-server")
 
 
-class FunctionCall(pydantic.BaseModel):
-    id: str
-    name: str
-    args: Dict
-
-
-def make_vapi_response(call: FunctionCall, result: str):
-    return {"results": [{"toolCallId": call.id, "result": result}]}
-
-
 def make_call(name, input: Dict):
     id = input.get("id", str(uuid.uuid4()))
     return FunctionCall(id=id, name=name, args=input)
-
-
-def parse_tool_call(function_name, params: Dict) -> FunctionCall:
-    """Parse the call from VAPI or from the test tool."""
-    # Handle simple format (used in tests and justfile commands)
-    if not params.get("message"):
-        args = {k: v for k, v in params.items() if v is not None}
-        return FunctionCall(id=str(uuid.uuid4()), name=function_name, args=args)
-
-    # Handle VAPI format
-    message = params["message"]
-    toolCalls = message.get("toolCalls", [])
-    if not toolCalls:
-        # If no toolCalls in message, treat the entire params as args
-        return FunctionCall(id=str(uuid.uuid4()), name=function_name, args=params)
-
-    tool = toolCalls[-1]
-    return FunctionCall(
-        id=tool["id"],
-        name=tool["function"]["name"],
-        args=tool["function"]["arguments"],
-    )
-
-
-def raise_if_not_authorized(headers: Dict):
-    token = headers.get(X_VAPI_SECRET, "")
-    if not token:
-        ic(headers)
-    if token != os.environ[TONY_API_KEY_NAME]:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect bearer token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
 
 
 def search_logic(params: Dict, headers: Dict):
@@ -191,11 +157,6 @@ def trusted_journal_read():
     if first is None:
         return "No journal entries found"
     return first["content"]
-
-
-def get_headers(request: Request):
-    ic(dict(request.headers))
-    return request.headers
 
 
 async def warm_up_endpoints(secret: str):

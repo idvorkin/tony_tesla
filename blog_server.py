@@ -18,12 +18,12 @@ import requests
 from icecream import ic
 from modal import App, Secret, asgi_app
 from fastapi import Depends, FastAPI
-from tony_server import (
+from shared import (
     make_vapi_response,
     parse_tool_call,
     raise_if_not_authorized,
     get_headers,
-    default_image,
+    blog_image,
     TONY_API_KEY_NAME,
 )
 
@@ -266,7 +266,7 @@ async def blog_search_endpoint(params: Dict, headers=Depends(get_headers)):
 
 
 @modal_app.function(
-    image=default_image,
+    image=blog_image,
     secrets=[Secret.from_name(TONY_API_KEY_NAME)],
 )
 @asgi_app()

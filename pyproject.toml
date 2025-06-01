@@ -28,11 +28,7 @@ dependencies = [
     "onebusaway",
     "modal",
     "textual>=1.0.0",
-    "twilio"
-]
-
-[project.optional-dependencies]
-dev = [
+    "twilio",
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
@@ -43,7 +39,7 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = ["tony", "storage", "bus", "blog_server", "tony_server"]
+py-modules = ["tony", "storage", "bus", "blog_server", "tony_server", "shared"]
 
 [project.scripts]
 storage = "storage:app"
