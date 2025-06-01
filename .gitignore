@@ -301,3 +301,4 @@ ENV/
 .well-known/
 sitemap.xml
 robots.txt
+uv.lock
