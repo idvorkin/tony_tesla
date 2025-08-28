@@ -6,7 +6,7 @@
 			"provider": "11labs",
 			"stability": 0.5,
 			"similarityBoost": 0.75,
-			"model": "eleven_flash_v2"
+			"model": "eleven_flash_v2_5"
 		},
 		"model": {
 			"model": "gpt-4.1",
