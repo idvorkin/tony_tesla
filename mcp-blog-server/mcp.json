@@ -1,0 +1,43 @@
+{
+  "name": "blog-server",
+  "version": "1.0.0",
+  "description": "MCP server for Igor's blog - search, read, and discover blog posts",
+  "author": "Igor Dvorkin",
+  "license": "MIT",
+  "runtime": "python",
+  "main": "blog_mcp_server.py",
+  "requirements": [
+    "fastmcp>=0.1.0",
+    "requests>=2.31.0"
+  ],
+  "environment": {
+    "FASTMCP_ENV": "production"
+  },
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  },
+  "tools": [
+    {
+      "name": "blog_info",
+      "description": "Get information about all blog posts"
+    },
+    {
+      "name": "random_blog", 
+      "description": "Get the full content of a random blog post"
+    },
+    {
+      "name": "read_blog_post",
+      "description": "Get content of a specific blog post by path or URL"
+    },
+    {
+      "name": "random_blog_url",
+      "description": "Get URL and title of a random blog post"
+    },
+    {
+      "name": "blog_search",
+      "description": "Search blog posts using keywords"
+    }
+  ]
+}
