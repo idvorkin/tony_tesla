@@ -118,108 +118,15 @@
 						"url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/search",
 						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
 					}
-				},
+				}
+				,
 				{
-					"type": "function",
+					"type": "mcp",
 					"function": {
-						"name": "blog_info",
-						"description": "Get information about posts on Igor's blog including URLs, titles, and descriptions",
-						"parameters": {
-							"type": "object",
-							"properties": {
-								"unused": {
-									"type": "string"
-								}
-							}
-						}
+						"name": "mcpTools"
 					},
-					"async": false,
 					"server": {
-						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_info",
-						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-					}
-				},
-				{
-					"type": "function",
-					"function": {
-						"name": "random_blog",
-						"description": "Get the content of a random blog post from Igor's blog",
-						"parameters": {
-							"type": "object",
-							"properties": {
-								"unused": {
-									"type": "string"
-								}
-							}
-						}
-					},
-					"async": false,
-					"server": {
-						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/random_blog",
-						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-					}
-				},
-				{
-					"type": "function",
-					"function": {
-						"name": "read_blog_post",
-						"description": "Get the content of a specific blog post from Igor's blog using its markdown path or URL",
-						"parameters": {
-							"type": "object",
-							"properties": {
-								"path": {
-									"type": "string",
-									"description": "The path to the blog post - can be either a markdown file path (e.g., '_d/vim_tips.md') or a URL path (e.g., '/vim')"
-								}
-							},
-							"required": ["path"]
-						}
-					},
-					"async": false,
-					"server": {
-						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/read_blog_post",
-						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-					}
-				},
-				{
-					"type": "function",
-					"function": {
-						"name": "random_blog_url_only",
-						"description": "Get just the URL of a random blog post from Igor's blog without its content",
-						"parameters": {
-							"type": "object",
-							"properties": {
-								"unused": {
-									"type": "string"
-								}
-							}
-						}
-					},
-					"async": false,
-					"server": {
-						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/random_blog_url",
-						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
-					}
-				},
-				{
-					"type": "function",
-					"function": {
-						"name": "blog_search",
-						"description": "Search Igor's blog posts using keywords",
-						"parameters": {
-							"type": "object",
-							"properties": {
-								"query": {
-									"type": "string",
-									"description": "The search query to find relevant blog posts"
-								}
-							},
-							"required": ["query"]
-						}
-					},
-					"async": false,
-					"server": {
-						"url": "https://idvorkin--modal-blog-server-fastapi-app.modal.run/blog_search",
+						"url": "https://idvorkin-blog-mcp.fastmcp.app/mcp",
 						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
 					}
 				}
