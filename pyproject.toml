@@ -39,7 +39,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-py-modules = ["tony", "storage", "bus", "blog_server", "tony_server", "shared"]
+py-modules = ["tony", "storage", "bus", "tony_server", "shared"]
 
 [project.scripts]
 storage = "storage:app"

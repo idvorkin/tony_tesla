@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Dict
 from zoneinfo import ZoneInfo
 import httpx
+import contextlib
 import asyncio
 
 import azure.cosmos.cosmos_client as cosmos_client
@@ -165,7 +166,7 @@ async def warm_up_endpoints(secret: str):
         base_url = "https://idvorkin--modal-tony-server"
         headers = {"x-vapi-secret": secret}
 
-        # Prepare warm-up calls
+        # Prepare warm-up calls (blog warmup now via MCP with short wait)
         tasks = [
             client.post(
                 f"{base_url}-search.modal.run",
@@ -175,24 +176,21 @@ async def warm_up_endpoints(secret: str):
             client.post(
                 f"{base_url}-library-arrivals.modal.run", json={}, headers=headers
             ),
-            client.post(
-                "https://idvorkin--modal-blog-server-blog-handler.modal.run",
-                json={
-                    "message": {
-                        "toolCalls": [
-                            {
-                                "function": {"name": "blog_info", "arguments": {}},
-                                "id": "warm-up",
-                                "type": "function",
-                            }
-                        ]
-                    }
-                },
-                headers=headers,
-            ),
         ]
 
-        # Execute calls without waiting for response
+        # Launch MCP warm-up, wait ~20ms, then drop
+        mcp_task = asyncio.create_task(
+            client.get("https://idvorkin-blog-mcp.fastmcp.app/mcp")
+        )
+        try:
+            await asyncio.sleep(0.05)
+        finally:
+            if not mcp_task.done():
+                mcp_task.cancel()
+                with contextlib.suppress(Exception):
+                    await mcp_task
+
+        # Execute remaining warm-ups (best-effort)
         await asyncio.gather(*tasks, return_exceptions=True)
 
 

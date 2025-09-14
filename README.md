@@ -26,6 +26,44 @@ This is my callable life coach! Lots of fun idea to be played with here.
 modal deploy tony_server
 point vapi server API at modal serve
 
+### Blog tools now via MCP
+
+The blog tools (`blog_info`, `random_blog`, `read_blog_post`, `random_blog_url`, `blog_search`) are no longer served by our FastAPI app. They are provided by the Blog MCP server instead.
+
+- Repo: [idvorkin/idvorkin-blog-mcp](https://github.com/idvorkin/idvorkin-blog-mcp)
+- Live MCP endpoint: `https://idvorkin-blog-mcp.fastmcp.app/mcp`
+
+To enable these in the assistant, ensure `modal_readonly/tony_assistant_spec.json` contains the MCP tool entry in `assistant.model.tools`:
+
+```json
+{
+  "type": "mcp",
+  "function": { "name": "mcpTools" },
+  "server": {
+    "url": "https://idvorkin-blog-mcp.fastmcp.app/mcp",
+    "secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+  }
+}
+```
+
+If you're configuring via a generic config snippet, it should look like:
+
+```json
+{
+  "tools": [
+    {
+      "type": "mcp",
+      "function": { "name": "mcpTools" },
+      "server": { "url": "https://mcp.zapier.com/api/mcp/s/********/mcp" }
+    }
+  ]
+}
+```
+
+Notes:
+- Replace `secret` at runtime; `tony_server.py` injects `x-vapi-secret` for tools.
+- Remove any legacy blog endpoints; they have been deleted from this repo.
+
 ## Sequence Diagram
 
 ```mermaid

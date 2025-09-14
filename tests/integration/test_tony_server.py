@@ -13,7 +13,6 @@ from tony_server import (
     send_text_endpoint,
     send_text_ifttt_endpoint,
 )
-from blog_server import app as blog_app
 import json
 from unittest.mock import patch, Mock
 from pathlib import Path
@@ -141,50 +140,7 @@ def test_make_vapi_response():
     assert response["results"][0]["result"] == "test result"
 
 
-def test_blog_search(auth_headers):
-    """Test the blog search endpoint"""
-    client = TestClient(blog_app)
-
-    # Test parameters for blog search
-    params = {
-        "message": {
-            "toolCalls": [
-                {
-                    "function": {
-                        "name": "blog_search",
-                        "arguments": {"query": "meditation"},
-                    },
-                    "id": "test_id",
-                    "type": "function",
-                }
-            ]
-        }
-    }
-
-    response = client.post("/blog_search", json=params, headers=auth_headers)
-
-    # Check response status and structure
-    assert response.status_code == 200, (
-        f"Expected status code 200, got {response.status_code}"
-    )
-
-    result = response.json()
-    assert "results" in result, "Expected 'results' key in response"
-    assert len(result["results"]) > 0, "Expected at least one result"
-
-    # Parse the results JSON string
-    search_results = json.loads(result["results"][0]["result"])
-    assert isinstance(search_results, list), "Expected results to be a list"
-
-    # Check the structure of each search result
-    if len(search_results) > 0:
-        first_result = search_results[0]
-        assert "title" in first_result, "Expected 'title' in search result"
-        assert "url" in first_result, "Expected 'url' in search result"
-        assert "content" in first_result, "Expected 'content' in search result"
-        assert first_result["url"].startswith("https://idvork.in"), (
-            "URL should start with https://idvork.in"
-        )
+    # Blog search now handled via MCP; endpoint tests removed
 
 
 @pytest.mark.usefixtures("mock_tony_files")
@@ -402,12 +358,11 @@ def test_apply_caller_restrictions():
     assert "search" in restricted_tool_names, (
         "Non-Igor should still have access to search"
     )
-    assert "blog_info" in restricted_tool_names, (
-        "Non-Igor should still have access to blog_info"
-    )
-    assert "blog_search" in restricted_tool_names, (
-        "Non-Igor should still have access to blog_search"
-    )
+    # Blog tools now provided via MCP; ensure MCP tools entry exists
+    assert any(
+        tool.get("type") == "mcp" and tool.get("function", {}).get("name") == "mcpTools"
+        for tool in other_tony["assistant"]["model"]["tools"]
+    ), "MCP blog tools should be available via mcpTools"
     assert (
         "<Restrictions>" in other_tony["assistant"]["model"]["messages"][0]["content"]
     )
