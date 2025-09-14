@@ -17,6 +17,10 @@ This is my callable life coach! Lots of fun idea to be played with here.
 
 ![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250501_060212.webp)
 
+### Igor trying to decide if he should be riding his bike or driving
+
+![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250914_164425.webp)
+
 ### Bob (not his real name), trying Tony for the first time
 
 ![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250501_061105.webp)
@@ -61,6 +65,7 @@ If you're configuring via a generic config snippet, it should look like:
 ```
 
 Notes:
+
 - Replace `secret` at runtime; `tony_server.py` injects `x-vapi-secret` for tools.
 - Remove any legacy blog endpoints; they have been deleted from this repo.
 
