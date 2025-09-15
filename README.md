@@ -17,9 +17,20 @@ This is my callable life coach! Lots of fun idea to be played with here.
 
 ![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250501_060212.webp)
 
-### Igor trying to decide if he should be riding his bike or driving
+### Igor rationalizing his car free identity with driving a Tesla
+
+Listen to Igor work through his identity crisis with Tony, his AI life coach:
+
+<audio controls>
+  <source src="https://github.com/idvorkin/blob/raw/master/blog/bike-vs-tony.mp3" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio>
 
 ![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250914_164425.webp)
+
+**The Story:** Igor was a dedicated cyclist (3,000+ miles in 2022) who prided himself on being car-free. After buying a Tesla, his cycling dropped to under 30 miles. Through conversations with his AI coach Tony (with a Tony Soprano personality), Igor realized that identity isn't about rigid adherence to past choices, but staying true to core values while adapting methods. He learned to use both bicycle and Tesla based on specific needs rather than seeing them as mutually exclusive.
+
+[Read the full story at idvork.in/bike-tesla-identity](https://idvork.in/bike-tesla-identity)
 
 ### Bob (not his real name), trying Tony for the first time
 
