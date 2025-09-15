@@ -19,12 +19,7 @@ This is my callable life coach! Lots of fun idea to be played with here.
 
 ### Igor rationalizing his car free identity with driving a Tesla
 
-Listen to Igor work through his identity crisis with Tony, his AI life coach:
-
-<audio controls>
-  <source src="https://github.com/idvorkin/blob/raw/master/blog/bike-vs-tony.mp3" type="audio/mpeg">
-  Your browser does not support the audio element.
-</audio>
+🎧 [Listen to Igor work through his identity crisis with Tony, his AI life coach](https://github.com/idvorkin/blob/raw/master/blog/bike-vs-tony.mp3)
 
 ![](https://raw.githubusercontent.com/idvorkin/ipaste/main/20250914_164425.webp)
 
