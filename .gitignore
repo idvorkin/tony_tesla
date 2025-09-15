@@ -99,6 +99,9 @@ $RECYCLE.BIN/
 *.code-workspace
 .history/
 
+# Claude
+.claude/settings.local.json
+
 # IntelliJ IDEA / JetBrains
 .idea/
 *.iws
