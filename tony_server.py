@@ -29,6 +29,7 @@ import azure.cosmos.cosmos_client as cosmos_client
 import pydantic
 import requests
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from icecream import ic
 
 # import asyncio
@@ -89,6 +90,20 @@ default_image = (
 )
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:4000",
+        "https://idvork.in",
+        "https://www.idvork.in"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 modal_app = App("modal-tony-server")
 
 
@@ -224,10 +239,15 @@ def get_caller_number(input: Dict) -> str | None:
         return None
 
 
-def is_igor_caller(input: Dict) -> bool:
-    """Check if the caller is Igor based on the phone number"""
+def is_igor_caller(input: Dict, headers: Dict) -> bool:
+    """Check if the caller is Igor based on phone number AND VAPI secret"""
     caller_number = get_caller_number(input)
-    return caller_number == "+12068904339"
+    if caller_number != "+12068904339":
+        return False
+
+    # Verify VAPI secret to prevent phone number spoofing
+    secret = headers.get(X_VAPI_SECRET, "")
+    return secret == os.environ.get(TONY_API_KEY_NAME, "")
 
 
 def apply_caller_restrictions(tony: Dict, is_igor: bool) -> Dict:
@@ -297,7 +317,7 @@ async def assistant_endpoint(input: Dict, headers=Depends(get_headers)):
         ic(failure_reason)
 
     # Check if caller is Igor
-    is_igor = is_igor_caller(input)
+    is_igor = is_igor_caller(input, headers)
 
     # Add context to system prompt
     time_in_pst = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))

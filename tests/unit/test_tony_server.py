@@ -74,6 +74,32 @@ def test_extract_failure_reason_empty_input():
     assert result is None
 
 
+def test_is_igor_caller_requires_both_phone_and_secret():
+    """Test that is_igor_caller requires both correct phone number and VAPI secret"""
+    igor_input = {"message": {"call": {"customer": {"number": "+12068904339"}}}}
+    valid_headers = {"x-vapi-secret": "correct_secret"}
+    invalid_headers = {"x-vapi-secret": "wrong_secret"}
+    no_secret_headers = {}
+
+    # Test correct phone + correct secret = Igor
+    with patch.dict(os.environ, {"TONY_API_KEY": "correct_secret"}):
+        from tony_server import is_igor_caller
+        assert is_igor_caller(igor_input, valid_headers) is True
+
+    # Test correct phone + wrong secret = NOT Igor
+    with patch.dict(os.environ, {"TONY_API_KEY": "correct_secret"}):
+        assert is_igor_caller(igor_input, invalid_headers) is False
+
+    # Test correct phone + no secret = NOT Igor
+    with patch.dict(os.environ, {"TONY_API_KEY": "correct_secret"}):
+        assert is_igor_caller(igor_input, no_secret_headers) is False
+
+    # Test wrong phone + correct secret = NOT Igor
+    other_input = {"message": {"call": {"customer": {"number": "+11234567890"}}}}
+    with patch.dict(os.environ, {"TONY_API_KEY": "correct_secret"}):
+        assert is_igor_caller(other_input, valid_headers) is False
+
+
 @pytest.mark.asyncio
 async def test_send_text_ifttt_unit():
     """Unit test for the IFTTT SMS webhook function"""

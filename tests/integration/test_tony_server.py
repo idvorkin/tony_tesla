@@ -277,17 +277,23 @@ def test_vapi_assistant_call_input_non_igor(auth_headers):
 
 def test_is_igor_caller():
     """Test the is_igor_caller function"""
-    # Test Igor's number
-    igor_input = {"message": {"call": {"customer": {"number": "+12068904339"}}}}
-    assert is_igor_caller(igor_input) is True
+    valid_headers = {"x-vapi-secret": os.environ.get("TONY_API_KEY", "test_secret")}
+    invalid_headers = {"x-vapi-secret": "wrong_secret"}
 
-    # Test different number
+    # Test Igor's number with valid secret
+    igor_input = {"message": {"call": {"customer": {"number": "+12068904339"}}}}
+    assert is_igor_caller(igor_input, valid_headers) is True
+
+    # Test Igor's number with invalid secret
+    assert is_igor_caller(igor_input, invalid_headers) is False
+
+    # Test different number with valid secret
     other_input = {"message": {"call": {"customer": {"number": "+11234567890"}}}}
-    assert is_igor_caller(other_input) is False
+    assert is_igor_caller(other_input, valid_headers) is False
 
     # Test invalid input structure
     invalid_input = {"message": {}}
-    assert is_igor_caller(invalid_input) is False
+    assert is_igor_caller(invalid_input, valid_headers) is False
 
 
 def test_get_caller_number():
@@ -498,6 +504,39 @@ async def test_send_text_integration():
     assert isinstance(response, dict)
     assert "results" in response
     assert "error" in response["results"][0]["result"].lower()
+
+
+def test_cors_headers(auth_headers, mock_tony_files):
+    """Test that CORS headers are properly configured"""
+    client = TestClient(app)
+
+    # Test with allowed origin
+    headers = {
+        **auth_headers,
+        "Origin": "https://idvork.in"
+    }
+
+    params = {"message": {"type": "assistant-request"}}
+    response = client.post("/assistant", json=params, headers=headers)
+
+    # Verify CORS headers are present
+    assert "access-control-allow-origin" in response.headers
+    assert response.headers["access-control-allow-origin"] == "https://idvork.in"
+    assert "access-control-allow-credentials" in response.headers
+    assert response.headers["access-control-allow-credentials"] == "true"
+
+    # Test preflight request
+    response = client.options(
+        "/assistant",
+        headers={
+            "Origin": "https://idvork.in",
+            "Access-Control-Request-Method": "POST"
+        }
+    )
+
+    assert response.status_code == 200
+    assert "access-control-allow-origin" in response.headers
+    assert "access-control-allow-methods" in response.headers
 
 
 @pytest.mark.asyncio
