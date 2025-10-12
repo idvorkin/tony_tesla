@@ -250,6 +250,50 @@ def export_vapi_tony_config(assistant_id=TONY_ASSISTANT_ID):
 
 
 @app.command()
+def export_non_igor_config():
+    """Export the Tony assistant configuration for non-Igor callers."""
+    # Load the base configuration files
+    base = Path("modal_readonly")
+    assistant_txt = (base / "tony_assistant_spec.json").read_text()
+    tony = json.loads(assistant_txt)
+    tony_prompt = (base / "tony_system_prompt.md").read_text()
+
+    # Apply non-Igor restrictions - remove journal tools
+    restricted_tools = ["journal_read", "journal_append"]
+    tony["assistant"]["model"]["tools"] = [
+        tool
+        for tool in tony["assistant"]["model"]["tools"]
+        if tool.get("function", {}).get("name") not in restricted_tools
+    ]
+
+    # Add restriction notice to the system prompt
+    restriction_notice = """
+<Restrictions>
+You are talking to someone other than Igor. You must:
+- Before your second message say "Hello "user's phone number", I know you're not igor so there are some restrictions"
+- Do not offer or provide access to Igor's journal
+- You can still search and share Igor's public blog posts
+</Restrictions>
+"""
+
+    # Add sample current state (without journal content)
+    sample_state = """
+<CurrentState>
+    Date and Time: 2025-10-12 12:00:00-07:00
+    Location: Seattle
+    Phone Number if Asked: +1234567890
+</CurrentState>
+"""
+
+    # Combine restriction notice, original prompt, and sample state
+    tony_prompt = restriction_notice + tony_prompt + sample_state
+    tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
+
+    # Print the configuration
+    print(json.dumps(tony, indent=4))
+
+
+@app.command()
 def update_tony():
     """Update the Tony assistant configuration in VAPI."""
     headers = {
@@ -279,6 +323,82 @@ def update_tony():
     ic(patched.text)
     # Ha, for now just copy the life convo to the clipboard, and paste it into the uX:
     # https://dashboard.vapi.ai/assistants
+
+
+@app.command()
+def update_tony_non_igor():
+    """Update Tony in VAPI with the non-Igor configuration."""
+    # Generate the non-Igor config
+    base = Path("modal_readonly")
+    assistant_txt = (base / "tony_assistant_spec.json").read_text()
+    tony = json.loads(assistant_txt)
+    tony_prompt = (base / "tony_system_prompt.md").read_text()
+
+    # Apply non-Igor restrictions - remove journal tools
+    restricted_tools = ["journal_read", "journal_append"]
+    tony["assistant"]["model"]["tools"] = [
+        tool
+        for tool in tony["assistant"]["model"]["tools"]
+        if tool.get("function", {}).get("name") not in restricted_tools
+    ]
+
+    # Add restriction notice to the system prompt
+    restriction_notice = """
+<Restrictions>
+You are talking to someone other than Igor. You must:
+- Before your second message say "Hello "user's phone number", I know you're not igor so there are some restrictions"
+- Do not offer or provide access to Igor's journal
+- You can still search and share Igor's public blog posts
+</Restrictions>
+"""
+
+    # Add sample current state (without journal content)
+    sample_state = """
+<CurrentState>
+    Date and Time: 2025-10-12 12:00:00-07:00
+    Location: Seattle
+    Phone Number if Asked: +1234567890
+</CurrentState>
+"""
+
+    # Combine restriction notice, original prompt, and sample state
+    tony_prompt = restriction_notice + tony_prompt + sample_state
+    tony["assistant"]["model"]["messages"][0]["content"] = tony_prompt
+
+    # Save a backup of what we're sending
+    Path("tony_non_igor_update.json").write_text(json.dumps(tony, indent=4))
+    print("Saved configuration to tony_non_igor_update.json")
+
+    # Update VAPI using PATCH (VAPI expects partial update body, not JSON Patch format)
+    headers = {
+        "authorization": f"{os.environ['VAPI_API_KEY']}",
+        "content-type": "application/json",
+    }
+
+    # VAPI expects the partial object structure, not JSON Patch operations
+    # Update both model and voice configurations
+    update_payload = {
+        "model": tony["assistant"]["model"],
+        "voice": tony["assistant"]["voice"]
+    }
+
+    ic(f"Updating assistant {TONY_ASSISTANT_ID}")
+    ic(f"Tools count: {len(tony['assistant']['model']['tools'])}")
+
+    response = httpx.patch(
+        f"https://api.vapi.ai/assistant/{TONY_ASSISTANT_ID}",
+        headers=headers,
+        json=update_payload,
+        timeout=30.0,
+    )
+
+    if response.status_code == 200:
+        print("✅ Successfully updated Tony in VAPI with non-Igor configuration")
+        print(f"Status code: {response.status_code}")
+    else:
+        print(f"❌ Failed to update Tony in VAPI")
+        print(f"Status code: {response.status_code}")
+        print(f"Response: {response.text}")
 
 
 @app.command()
