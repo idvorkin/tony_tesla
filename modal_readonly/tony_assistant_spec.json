@@ -117,16 +117,14 @@
 						"url": "https://idvorkin--modal-tony-server-fastapi-app.modal.run/search",
 						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
 					}
-				}
-				,
+				},
 				{
 					"type": "mcp",
 					"function": {
 						"name": "mcpTools"
 					},
 					"server": {
-						"url": "https://idvorkin-blog-mcp.fastmcp.app/mcp",
-						"secret": "SHOULD_BE_REPLACED_BY_ASSISTANT"
+						"url": "https://idvorkin-blog-mcp.fastmcp.app/mcp"
 					}
 				}
 			],
