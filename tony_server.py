@@ -195,7 +195,7 @@ async def warm_up_endpoints(secret: str):
 
         # Launch MCP warm-up, wait ~20ms, then drop
         mcp_task = asyncio.create_task(
-            client.get("https://idvorkin-blog-mcp.fastmcp.app/mcp")
+            client.get("https://idvorkin-blog-and-repo.fastmcp.app/mcp")
         )
         try:
             await asyncio.sleep(0.05)

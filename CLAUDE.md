@@ -76,7 +76,7 @@ Tony Tesla is an AI-powered callable life coach built with FastAPI and Modal for
 - **OneBusAway**: Real-time library bus arrivals
 - **Twilio**: SMS messaging
 - **IFTTT**: Alternative SMS webhook provider
-- **Blog MCP Server**: External MCP server at https://idvorkin-blog-mcp.fastmcp.app/mcp
+- **Blog MCP Server**: External MCP server at https://idvorkin-blog-and-repo.fastmcp.app/mcp
 
 ### Access Control
 
