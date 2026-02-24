@@ -41,26 +41,26 @@ Only pause to ask for confirmation when:
 
 ## Project Overview
 
-Tony Tesla is an AI-powered callable life coach built with FastAPI and Modal for serverless deployment. The system enables phone-based coaching conversations via VAPI integration, with journal management, web search, library arrival times, and SMS capabilities. The project emphasizes Typer CLI tools with modern Python patterns.
+Tony Tesla is an AI-powered callable life coach built with FastAPI and Modal for serverless deployment. The system enables phone-based coaching conversations via VAPI integration, with journal management, web search, library arrival times, and SMS capabilities. The project emphasizes Typer CLI tools with modern Python 3.12 patterns.
 
 ## Architecture
 
 ### Core Components
 
 - **tony_server.py**: Main FastAPI application deployed on Modal
-
   - Assistant endpoint: Initializes Tony with system prompt and caller context
   - Tool endpoints: Search, journal operations, library arrivals, SMS
   - Caller-based restrictions (Igor vs. non-Igor callers)
   - Warmup logic for endpoints to reduce cold-start latency
 
 - **tony.py**: CLI for managing VAPI calls, configurations, and call analysis
-
   - Commands: `calls`, `last_transcript`, `export_vapi_tony_config`, `search`, `send_text`
 
 - **storage.py**: Azure Cosmos DB journal management CLI
-
   - Commands: `read_journal`, `append_journal`, `replace_journal`, `list_journal`
+
+- **bus.py**: CLI for transit/bus data (library arrivals, route stops, data downloads)
+  - Commands: `library`, `stops_for_route`, `get_latest_data`
 
 - **shared.py**: Shared utilities for VAPI response formatting and authorization
 
@@ -242,6 +242,16 @@ If you catch yourself writing "new", "old", "legacy", "wrapper", "unified", or i
 - NEVER SKIP, EVADE OR DISABLE A PRE-COMMIT HOOK
 - NEVER use `git add -A` unless you've just done a `git status` - Don't add random test files to the repo.
 
+### Pre-commit Hooks
+
+The following hooks run on every commit (`.pre-commit-config.yaml`):
+
+- **Ruff**: Python linting (`--fix`) and formatting
+- **Biome**: JS/TS/JSON/CSS linting and formatting
+- **Prettier**: Markdown and HTML formatting
+- **Dasel**: YAML/JSON validation
+- **`just fast-test`**: Runs fast tests
+
 ### Git Commit Format
 
 Multi-line format with type prefix:
@@ -280,6 +290,16 @@ Before committing:
 3. E2E tests last (full system validation)
 4. Run specific tests when iterating: `pytest tests/unit/test_file.py -v -k test_name`
 5. Use `-n auto` for parallel execution in CI/full test runs
+
+### Async Tests
+
+pytest is configured with `asyncio_mode = "strict"`. Async tests require explicit decoration:
+
+```python
+@pytest.mark.asyncio
+async def test_something():
+    ...
+```
 
 ## Issue Tracking
 

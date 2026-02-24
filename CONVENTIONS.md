@@ -1,9 +1,5 @@
 # Coding conventions used in this project
 
-#
-
-Cursor rules are in CONVENTIONS.\*, before doing anythign else. Adding them to the context
-
 For CLIs, use a Typer app.
 Use `ic` for logging.
 Use Rich for pretty printing.
@@ -46,27 +42,6 @@ Function: get_order_details()
 Return Type: OrderDetailsResponse (which may include nested models like ProductInfo or ShippingDetails).
 </examples>
 
-### Testing
-
-When possible update the tests to reflect the new changes.
-Tests are in the test directory
-
-### Running Tests
-
-When running pytest, use auto mode with pytest-xdist to parallelize test execution:
-
-```bash
-pytest -n auto
-```
-
-This automatically detects the optimal number of CPU cores and distributes tests accordingly.
-
-For debugging specific tests, run without -n flag:
-
-```bash
-pytest test_specific.py -v
-```
-
 ### TUI Applications
 
 When creating TUI (Text User Interface) applications:
@@ -83,7 +58,6 @@ When creating TUI (Text User Interface) applications:
   ```
 - Include a Help screen modal that shows available commands
 - Use DataTable for tabular data display:
-
   - When accessing DataTable columns, handle ColumnKey objects by stripping wrapper text:
     ```python
     columns = [str(col).replace("ColumnKey('", "").replace("')", "")
@@ -93,7 +67,6 @@ When creating TUI (Text User Interface) applications:
   - Implement row selection handlers with `on_data_table_row_selected`
 
 - For modal screens:
-
   - Inherit from ModalScreen
   - Include proper styling in on_mount:
     ```python
@@ -126,44 +99,6 @@ When creating TUI (Text User Interface) applications:
     def app_wrap_loguru():
         app()
     ```
-
-### TUI Applications
-
-When creating TUI (Text User Interface) applications:
-
-- Use Textual library for TUI apps
-- Include standard key bindings:
-  ```python
-  BINDINGS = [
-      Binding("q", "quit", "Quit"),
-      Binding("j", "move_down", "Down"),
-      Binding("k", "move_up", "Up"),
-      Binding("?", "help", "Help")
-  ]
-  ```
-- Include a Help screen modal that shows available commands
-- Use DataTable for tabular data display
-- Use Static widgets for text display areas
-- Use Container for layout management
-- Include proper error handling with loguru
-- Follow this structure for the main app:
-
-  ```python
-  class MyTUIApp(App):
-      # Define bindings
-      # Define compose() for layout
-      # Define action methods for commands
-
-  @app.command()
-  def browse():
-      """Browse data in an interactive TUI"""
-      app = MyTUIApp()
-      app.run()
-
-  @logger.catch()
-  def app_wrap_loguru():
-      app()
-  ```
 
 ### Debugging
 
@@ -279,7 +214,6 @@ When testing Textual TUI applications:
   ```
 
 - Test DataTable operations:
-
   - Extract column information:
     ```python
     columns = [str(col).replace("ColumnKey('", "").replace("')", "")
@@ -337,60 +271,3 @@ When updating the configuration, ensure compatibility between the exported setti
 
 - Use `uv` instead of `pip` for package management.
 - Ensure to update dependencies in `pyproject.toml` when adding new packages or updating existing ones.
-
-### Fixing Tests
-
-When fixing tests, the goal is to be as efficient as possible. Here are some guidelines:
-
-- **Unit Tests First**: Ensure unit tests pass before moving on to integration tests.
-- **Integration Before E2E**: Run integration tests before end-to-end tests to catch issues early.
-- **Parallel Execution**: Run tests in parallel to save time.
-- **Iterate on Failing Tests**: If iterating on a failing test, only run that specific test instead of the entire suite.
-  - Example: Use `pytest tests/unit/test_specific.py -v` to run a specific unit test.
-  - For integration tests, use `pytest tests/integration/test_specific.py -v`.
-  - For end-to-end tests, use `pytest tests/e2e/test_specific.py -v`.
-
-### Git Commit Messages
-
-When creating git commit messages:
-
-- Use multi-line messages for meaningful commits
-- First line is a summary (50 chars or less) starting with type: (e.g., "feat:", "fix:", "test:")
-- Leave a blank line after the summary
-- Follow with bullet points of specific changes
-
-Since the tools don't support direct newlines, use $' syntax with \n for multi-line messages:
-
-```bash
-git commit -m $'feat: Add new feature\n\n- Add X functionality\n- Update Y module\n- Fix Z issue'
-```
-
-Types for the summary line:
-
-- feat: New feature
-- fix: Bug fix
-- test: Adding or updating tests
-- docs: Documentation only changes
-- refactor: Code change that neither fixes a bug nor adds a feature
-- style: Changes that do not affect the meaning of the code
-- chore: Changes to the build process or auxiliary tools
-
-### Git Commit Best Practices
-
-Before committing changes:
-
-1. Review modified files using file reading capabilities rather than git diff
-2. Run tests to ensure they pass, following the test instructions above:
-   - Run unit tests first
-   - Use parallel execution with `pytest -n auto`
-   - For iterating on specific tests, use the test file path:
-     ```bash
-     # Example: Run only the specific test you're working on
-     pytest tests/integration/test_specific.py -v -k test_name
-     ```
-3. Run `git status` to review all modified files
-4. Verify that only intended files are included
-5. Use `git add` to stage specific files rather than `git add .`
-6. Double-check staged files with `git status` again before committing
-7. For multi-file changes, ensure all related files are included (e.g., both implementation and tests)
-8. Exclude temporary files, logs, and other unrelated changes
