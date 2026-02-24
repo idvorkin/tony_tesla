@@ -379,7 +379,7 @@ You are talking to someone other than Igor. You must:
     # Update both model and voice configurations
     update_payload = {
         "model": tony["assistant"]["model"],
-        "voice": tony["assistant"]["voice"]
+        "voice": tony["assistant"]["voice"],
     }
 
     ic(f"Updating assistant {TONY_ASSISTANT_ID}")
@@ -396,7 +396,7 @@ You are talking to someone other than Igor. You must:
         print("✅ Successfully updated Tony in VAPI with non-Igor configuration")
         print(f"Status code: {response.status_code}")
     else:
-        print(f"❌ Failed to update Tony in VAPI")
+        print("❌ Failed to update Tony in VAPI")
         print(f"Status code: {response.status_code}")
         print(f"Response: {response.text}")
 

@@ -26,9 +26,8 @@ import contextlib
 import asyncio
 
 import azure.cosmos.cosmos_client as cosmos_client
-import pydantic
 import requests
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from icecream import ic
 
@@ -97,7 +96,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:4000",
         "https://idvork.in",
-        "https://www.idvork.in"
+        "https://www.idvork.in",
     ],
     allow_credentials=True,
     allow_methods=["*"],

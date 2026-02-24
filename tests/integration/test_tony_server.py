@@ -139,7 +139,6 @@ def test_make_vapi_response():
     assert response["results"][0]["toolCallId"] == "test_id"
     assert response["results"][0]["result"] == "test result"
 
-
     # Blog search now handled via MCP; endpoint tests removed
 
 
@@ -511,10 +510,7 @@ def test_cors_headers(auth_headers, mock_tony_files):
     client = TestClient(app)
 
     # Test with allowed origin
-    headers = {
-        **auth_headers,
-        "Origin": "https://idvork.in"
-    }
+    headers = {**auth_headers, "Origin": "https://idvork.in"}
 
     params = {"message": {"type": "assistant-request"}}
     response = client.post("/assistant", json=params, headers=headers)
@@ -530,8 +526,8 @@ def test_cors_headers(auth_headers, mock_tony_files):
         "/assistant",
         headers={
             "Origin": "https://idvork.in",
-            "Access-Control-Request-Method": "POST"
-        }
+            "Access-Control-Request-Method": "POST",
+        },
     )
 
     assert response.status_code == 200
