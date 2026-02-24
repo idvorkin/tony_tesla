@@ -13,12 +13,10 @@ _**Assistant**_
 Yes, I'll summarize the key coding conventions and rules that have been established for this project:
 
 1. **CLI Applications**:
-
    - Use Typer for CLI apps with latest syntax for arguments/options
    - Use type annotations with built-ins (e.g., `foo | None` vs `Optional[str]`)
 
 2. **Core Libraries**:
-
    - `ic` for logging/debugging
    - Rich for pretty printing
    - Loguru for logging
@@ -26,33 +24,28 @@ Yes, I'll summarize the key coding conventions and rules that have been establis
    - Textual for TUI applications
 
 3. **Code Style**:
-
    - Prefer early returns over nested ifs
    - Use descriptive variable names over comments
    - Avoid deep nesting
 
 4. **Type System**:
-
    - Use types whenever possible
    - Use latest Python 3.12 type syntax
    - Use Pydantic models for return types instead of tuples
    - Name return types as `FunctionReturn` for the function name
 
 5. **Testing**:
-
    - Tests should be in the `test` directory
    - Use `pytest -n auto` for parallel test execution
    - For debugging specific tests, use `pytest test_specific.py -v`
 
 6. **TUI Applications**:
-
    - Use Textual library
    - Include standard key bindings (q, j, k, ?)
    - Include Help screen modal
    - Use proper error handling with loguru
 
 7. **Package Management**:
-
    - Use `uv` instead of `pip`
    - Update dependencies in `pyproject.toml`
 
@@ -142,12 +135,10 @@ _\*\*\*\*_
 Based on the search results and file access attempts, here's what I can tell about `langchain_helper`:
 
 1. It's imported in `tony.py` and used for two main purposes:
-
    - `langsmith_trace_if_requested()` function for tracing/debugging
    - `get_model()` function for getting a language model instance
 
 2. The main usage appears in the `parse_calls` command and `a_parse_calls` function, which are used to:
-
    - Parse and analyze recent calls for todos and reminders
    - Transcribe call content using OpenAI models
    - Structure the output into a `CallSummary` format

@@ -5,14 +5,14 @@ import pytest
 @pytest.fixture(autouse=True)
 def setup_test_environment(request):
     """Set up test environment variables for unit and integration tests.
-    
+
     E2E tests are skipped to allow them to use real environment variables.
     """
     # Skip environment setup for e2e tests - they need real API keys
     if "e2e" in request.node.nodeid:
         yield
         return
-        
+
     original_environ = dict(os.environ)
 
     # Set up test environment variables

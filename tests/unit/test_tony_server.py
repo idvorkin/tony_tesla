@@ -84,6 +84,7 @@ def test_is_igor_caller_requires_both_phone_and_secret():
     # Test correct phone + correct secret = Igor
     with patch.dict(os.environ, {"TONY_API_KEY": "correct_secret"}):
         from tony_server import is_igor_caller
+
         assert is_igor_caller(igor_input, valid_headers) is True
 
     # Test correct phone + wrong secret = NOT Igor

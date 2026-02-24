@@ -19,12 +19,14 @@ X_VAPI_SECRET = "x-vapi-secret"
 modal_storage = "modal_readonly"
 blog_image = (
     Image.debian_slim(python_version="3.12")
-    .pip_install([
-        "icecream",
-        "requests", 
-        "pydantic",
-        "fastapi[standard]",
-    ])
+    .pip_install(
+        [
+            "icecream",
+            "requests",
+            "pydantic",
+            "fastapi[standard]",
+        ]
+    )
     .add_local_file("shared.py", remote_path="/root/shared.py")
     .add_local_dir(modal_storage, remote_path="/" + modal_storage)
 )
@@ -79,4 +81,4 @@ def raise_if_not_authorized(headers: Dict):
 def get_headers(request: Request):
     """Extract headers from FastAPI request"""
     ic(dict(request.headers))
-    return request.headers 
+    return request.headers
